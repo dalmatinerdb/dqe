@@ -321,15 +321,15 @@ to_ms({time, N, w}) ->
     N*1000*60*60*24*7.
 
 mget(sum, Bucket, G, Start, Count) ->
-    {T, {ok, Ms}} = timer:tc(dalmatiner_connection, list, [Bucket]),
-    {T1, Ms1} = timer:tc(fun () -> glob_match(G, Ms) end),
-    {T2, Res} = timer:tc(fun () -> mget_sum(Bucket, Ms1, Start, Count) end),
+    {ok, Ms} = dalmatiner_connection:list(Bucket),
+    Ms1 = glob_match(G, Ms),
+    Res =  mget_sum(Bucket, Ms1, Start, Count),
     {ok, Res};
 
 mget(avg, Bucket, G, Start, Count) ->
-    {T, {ok, Ms}} = timer:tc(dalmatiner_connection, list, [Bucket]),
-    {T1, Ms1} = timer:tc(fun () -> glob_match(G, Ms) end),
-    {T2, Res} = timer:tc(fun () -> mget_avg(Bucket, Ms1, Start, Count) end),
+    {ok, Ms} = dalmatiner_connection:list(Bucket),
+    Ms1 = glob_match(G, Ms),
+    Res = mget_avg(Bucket, Ms1, Start, Count),
     {ok, Res}.
 
 

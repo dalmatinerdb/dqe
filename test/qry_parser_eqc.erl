@@ -3,6 +3,8 @@
 -ifdef(TEST).
 -ifdef(EQC).
 
+-define(EQC_EUNIT_TIMEUT, 500).
+
 -include_lib("eqc/include/eqc_fsm.hrl").
 -include_lib("fqc/include/fqc.hrl").
 -compile(export_all).
