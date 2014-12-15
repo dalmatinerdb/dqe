@@ -101,10 +101,10 @@ prepare(Query) ->
 translate({aggr, Aggr, SubQ}, Aliases, Buckets) ->
     {dqe_aggr1, [Aggr, translate(SubQ, Aliases, Buckets)]};
 
-translate({aggr, multiply, SubQ, Arg}, Aliases, Buckets) ->
+translate({math, multiply, SubQ, Arg}, Aliases, Buckets) ->
     {dqe_math, [scale, translate(SubQ, Aliases, Buckets), Arg]};
 
-translate({aggr, divide, SubQ, Arg}, Aliases, Buckets) ->
+translate({math, divide, SubQ, Arg}, Aliases, Buckets) ->
     {dqe_math, [scale, translate(SubQ, Aliases, Buckets), 1/Arg]};
 
 translate({aggr, Aggr, SubQ, Time}, Aliases, Buckets) ->
@@ -188,6 +188,9 @@ needs_buckets(L,  Buckets) when is_list(L) ->
     lists:foldl(fun needs_buckets/2, Buckets, L);
 
 needs_buckets({aggr, _Aggr, SubQ}, Buckets) ->
+    needs_buckets(SubQ, Buckets);
+
+needs_buckets({math, _Aggr, SubQ, _}, Buckets) ->
     needs_buckets(SubQ, Buckets);
 
 needs_buckets({aggr, _Aggr, SubQ, _}, Buckets) ->
