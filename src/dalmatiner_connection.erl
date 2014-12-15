@@ -77,7 +77,7 @@ start_link(Args) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
-	{ok, MaxRead} = application:get_env(dalmatiner_frontend, max_read),
+	{ok, MaxRead} = application:get_env(dqe, max_read),
     {ok, C} = ddb_tcp:connect(Host, Port),
     {ok, #state{connection = C, max_read=MaxRead}}.
 
