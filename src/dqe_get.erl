@@ -41,7 +41,7 @@ start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
         {ok, Res, <<>>} ->
             {done, {mmath_bin:empty(Count), Res}, State};
         {ok, Res, Data} ->
-            {done, {Data, Res}, State}
+            {done, {mmath_bin:convert(Data), Res}, State}
     end.
 
 emit(_Child, _Data, State) ->
