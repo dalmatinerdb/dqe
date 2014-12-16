@@ -2,6 +2,8 @@
 
 -behaviour(dflow).
 
+-include_lib("mmath/include/mmath.hrl").
+
 -export([init/1, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
@@ -47,7 +49,7 @@ done(_Child, State = #state{aggr = Aggr, time = Time, acc = Acc}) ->
 
 
 execute(Aggr, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * 9 ->
-    MinSize = T1 * 9,
+    MinSize = T1 * ?DATA_SIZE,
     <<Data:MinSize/binary, Acc1/binary>> = Acc,
     Result = mmath_aggr:Aggr(Data, T1),
     execute(Aggr, Acc1, T1, <<AccEmit/binary, Result/binary>>);
