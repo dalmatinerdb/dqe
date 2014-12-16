@@ -33,7 +33,7 @@ start({Start, Count},
             {emit, {mmath_bin:empty(Chunk), Res}, State};
         {ok, Res, Data} ->
             dflow:start(self(), {Start + Chunk, Count - Chunk}),
-            {emit, {Data, Res}, State}
+            {emit, {mmath_bin:convert(Data), Res}, State}
     end;
 
 start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
