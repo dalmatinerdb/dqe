@@ -139,8 +139,12 @@ keep_optimizing_mget([_, _, _, _, _ | _] = Gets) ->
 keep_optimizing_mget(Gets) ->
     Gets.
 
+optimize_mget([G1, G2, G3, G4]) ->
+    [{dqe_mget, [[G1, G2, G3, G4]]}];
+
 optimize_mget([G1, G2, G3, G4 | GRest]) ->
     [{dqe_mget, [[G1, G2, G3, G4]]} | optimize_mget(GRest)];
+
 
 optimize_mget([Get]) ->
     [Get];
