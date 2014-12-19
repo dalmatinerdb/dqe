@@ -10,6 +10,8 @@
 %%%-------------------------------------------------------------------
 -module(dqe).
 
+-include_lib("dproto/include/dproto.hrl").
+
 -export([prepare/1, run/1, run/2]).
 
 -type query_reply() :: [{Name :: binary(),
@@ -154,39 +156,19 @@ optimize_mget(Gets) ->
 
 
 glob_match(G, Ms) ->
-    GE = re:split(G, "\\*"),
     F = fun(M) ->
-                rmatch(GE, M)
+                rmatch(G, M)
         end,
     lists:filter(F, Ms).
 
-
-rmatch([<<>>, <<$., Ar1/binary>> | Ar], B) ->
-    rmatch([Ar1 | Ar], skip_one(B));
-rmatch([<<>> | Ar], B) ->
-    rmatch(Ar, skip_one(B));
-rmatch([<<$., Ar1/binary>> | Ar], B) ->
-    rmatch([Ar1 | Ar], skip_one(B));
-rmatch([A | Ar], B) ->
-    case binary:longest_common_prefix([A, B]) of
-        L when L == byte_size(A) ->
-            <<_:L/binary, Br/binary>> = B,
-            rmatch(Ar, Br);
-        _ ->
-            false
-    end;
+rmatch(['*' | Rm], <<_S:?METRIC_ELEMENT_SS/?SIZE_TYPE, _:_S/binary, Rb/binary>>) ->
+    rmatch(Rm, Rb);
+rmatch([_M | Rm], <<_S:?METRIC_ELEMENT_SS/?SIZE_TYPE, _M:_S/binary, Rb/binary>>) ->
+    rmatch(Rm, Rb);
 rmatch([], <<>>) ->
     true;
-rmatch(_A, _B) ->
+rmatch(_, _) ->
     false.
-
-skip_one(<<$., R/binary>>) ->
-    R;
-skip_one(<<>>) ->
-    <<>>;
-skip_one(<<_, R/binary>>) ->
-    skip_one(R).
-
 
 needs_buckets(L,  Buckets) when is_list(L) ->
     lists:foldl(fun needs_buckets/2, Buckets, L);

@@ -1,76 +1,124 @@
+%% -*- erlang -*-
 Nonterminals
-funs fun selector select timeframe aliases alias resolution int_or_time mb fune name pit.
+funs fun selector select timeframe aliases alias resolution int_or_time mb fune
+var pit metric glob_metric part_or_name calculatable bucket.
 
-Terminals '(' ')' ','
-metric glob_metric caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in kw_between kw_and kw_ago kw_now derivate time math percentile float.
+Terminals '(' ')' ',' '.' '*'
+part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in
+kw_between kw_and kw_ago kw_now derivate time math percentile float name.
 
+
+%%%===================================================================
+%%% Root statement
+%%%===================================================================
 Rootsymbol select.
+
 
 select -> kw_select funs timeframe : {select, '$2', '$3', {time, 1, s}}.
 select -> kw_select funs kw_from aliases timeframe : {select, '$2', '$4', '$5', {time, 1, s}}.
 select -> kw_select funs timeframe resolution : {select, '$2', '$3', '$4'}.
 select -> kw_select funs kw_from aliases timeframe resolution : {select, '$2', '$4', '$5', '$6'}.
 
+%%%===================================================================
+%%% SELECT part
+%%%===================================================================
+
+%% List of functions in the select part of the statement
 funs -> fune : ['$1'].
 funs -> fune ',' funs : ['$1'] ++ '$3'.
 
-fune -> selector kw_as name : {named, '$3', '$1'}.
-fune -> name kw_as name : {named, '$3', {var, '$1'}}.
-fune -> fun kw_as name : {named, '$3', '$1'}.
-fune -> selector : '$1'.
-fune -> name : {var, '$1'}.
-fune -> fun : '$1'.
+%% Element in the funciton list, either a calculatable or a calculatable
+%% with a name
+fune -> calculatable kw_as part_or_name : {named, '$3', '$1'}.
+fune -> calculatable : '$1'.
 
-alias -> selector kw_as name : {alias, '$3', '$1'}.
+%% Something that can be calculated:
+%% * a function that can be resolved
+calculatable -> fun : '$1'.
+%% * a variable that can be looked up
+calculatable -> var : '$1'.
+%% * a selector that can be retrived
+calculatable -> selector : '$1'.
 
+
+%% A aggregation function
+fun -> derivate '(' calculatable ')' : {aggr, derivate, '$3'}.
+fun -> percentile '(' calculatable ',' float ',' int_or_time ')' : {aggr, percentile, '$3', unwrap('$5'), '$7'}.
+fun -> aggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> caggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> math '(' calculatable ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
+
+%% A variable.
+var -> part_or_name : {var, '$1'}.
+
+%% A selector, either a combination of <metric> BUCKET <bucket> or a mget aggregate.
+selector -> mb : {get, '$1'}.
+selector -> caggr '(' glob_metric kw_bucket bucket ')': {mget, unwrap('$1'), {'$5', '$3'}}.
+selector -> caggr '(' metric kw_bucket bucket ')': {mget, unwrap('$1'), {'$5', '$3'}}.
+
+%% A bucket and metric combination used as a solution
+mb -> metric kw_bucket part_or_name : {'$3', '$1'}.
+
+%%%===================================================================
+%%% From section, aliased selectors
+%%%===================================================================
+
+%% List of aliases after the AS statement
 aliases -> alias : ['$1'].
-
 aliases -> alias ',' aliases  : ['$1'] ++ '$3'.
 
-name -> metric : unwrap('$1').
-name -> aggr : list_to_binary(atom_to_list(unwrap('$1'))).
-name -> caggr : list_to_binary(atom_to_list(unwrap('$1'))).
+%% A single alias in the AS statement
+alias -> selector kw_as part_or_name : {alias, '$3', '$1'}.
 
-fun -> derivate '(' fun ')' : {aggr, derivate, '$3'}.
-fun -> derivate '(' selector ')' : {aggr, derivate, '$3'}.
+%%%===================================================================
+%%% TIEM related symbols
+%%%===================================================================
 
-fun -> percentile '(' fun ',' float ',' int_or_time ')' : {aggr, percentile, '$3', unwrap('$5'), '$7'}.
-fun -> percentile '(' selector ',' float ',' int_or_time ')' : {aggr, percentile, '$3', unwrap('$5'), '$7'}.
+%% A timeframe for the select statment
+timeframe    -> kw_last int_or_time: {last, '$2'}.
+timeframe    -> kw_between pit kw_and pit : {between, '$2', '$4'}.
 
-fun -> aggr '(' fun ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> aggr '(' name ',' int_or_time ')' : {aggr, unwrap('$1'), {var, '$3'}, '$5'}.
-fun -> aggr '(' selector ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> caggr '(' fun ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> caggr '(' name ',' int_or_time ')' : {aggr, unwrap('$1'), {var, '$3'}, '$5'}.
-fun -> caggr '(' selector ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> math '(' fun ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
-fun -> math '(' selector ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
+%% A point in time either a integer, a relative time with a AGO statement or the
+%% NOW keyword.
+pit          -> int_or_time kw_ago : {ago, '$1'}.
+pit          -> integer : unwrap('$1').
+pit          -> kw_now : now.
 
-selector -> mb : {get, '$1'}.
-selector -> caggr '(' glob_metric kw_bucket name ')': {mget, unwrap('$1'), {'$5', unwrap('$3')}}.
+%% A relative time either given as absolute integer or relative.
+int_or_time  -> integer time : {time, unwrap('$1'), unwrap('$2')}.
+int_or_time  -> integer : unwrap('$1').
 
-%%caggr_selectors -> selector : ['$1'].
-%%caggr_selectors -> caggr_selector : ['$1'].
-%%caggr_selectors -> selector ',' caggr_selectors : ['$1'] ++ '$3'.
-%%caggr_selectors -> caggr_selector ',' caggr_selectors : ['$1'] ++ '$3'.
 
-%%caggr_selector  -> glob_metric kw_bucket name: {mget, {unwrap('$3'), unwrap('$1')}}.
+resolution   -> kw_in int_or_time : '$2'.
 
-timeframe         -> kw_last int_or_time: {last, '$2'}.
-timeframe         -> kw_between pit kw_and pit : {between, '$2', '$4'}.
+%%%===================================================================
+%%% Helper symbols
+%%%===================================================================
 
-resolution        -> kw_in int_or_time : '$2'.
+%% A naming, either wrapped in 's or not if the syntax is supported, reserved
+%% words always have to be wrapped in 's
+part_or_name -> part : unwrap('$1').
+part_or_name -> name : unwrap('$1').
 
-mb -> name kw_bucket name : {'$3', '$1'}.
 
-int_or_time -> integer time : {time, unwrap('$1'), unwrap('$2')}.
-int_or_time -> integer : unwrap('$1').
+%% A metric, one or more parts seperated by '.'
+metric -> part_or_name : ['$1'].
+metric -> part_or_name '.' metric: ['$1' | '$3'].
 
-pit -> int_or_time kw_ago : {ago, '$1'}.
-pit -> integer : unwrap('$1').
-pit -> kw_now : now.
+%% A metric including a glob
+glob_metric -> '*' : ['*'].
+glob_metric -> '*' '.' metric : ['*' | '$3'].
+glob_metric -> '*' '.' glob_metric : ['*' | '$3'].
+glob_metric -> part_or_name '.' glob_metric : ['$1' | '$3'].
+
+bucket -> part_or_name : '$1'.
+
+%%%===================================================================
+%%% Erlang code.
+%%%===================================================================
 
 Erlang code.
 -ignore_xref([format_error/1, parse_and_scan/1, return_error/2]).
 
-unwrap({_,_,V}) -> V.
+unwrap({_,_,V}) -> V;
+unwrap({_,V}) -> V.

@@ -6,16 +6,24 @@ parse(S) when is_binary(S)->
     parse(binary_to_list(S));
 parse(S) ->
     case dql_lexer:string(S) of
-        {error,{Line,dql_lexer,E},1} ->
-            {error, io_lib:format("Error in line ~p: ~p", [Line, E])};
+        {error,{Line, dql_lexer,E},1} ->
+            lexer_error(Line, E);
         {ok, L, _} ->
             case dql_parser:parse(L) of
                 {error, {Line, dql_parser, E}} ->
-                    {error, io_lib:format("Error in line ~p: ~s", [Line, E])};
+                    parser_error(Line, E);
                 R ->
                     R
             end
     end.
+
+parser_error(Line, E)  ->
+    {error, list_to_binary(io_lib:format("Parser error in line ~p: ~s",
+                                         [Line, E]))}.
+
+lexer_error(Line, E)  ->
+    {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
+                                         [Line, E]))}.
 
 prepare(S) ->
     case parse(S) of
@@ -221,6 +229,17 @@ combine([E | R], <<>>) ->
 combine([E | R], Acc) ->
     combine(R, <<Acc/binary, ", ", E/binary>>).
 
+
+unparse_metric(Ms) ->
+    <<".", Result/binary>> = unparse_metric(Ms, <<>>),
+    Result.
+unparse_metric(['*' | R], Acc) ->
+    unparse_metric(R, <<Acc/binary, ".*">>);
+unparse_metric([Metric | R], Acc) ->
+    unparse_metric(R, <<Acc/binary, ".'", Metric/binary, "'">>);
+unparse_metric([], Acc) ->
+    Acc.
+
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],
     Unparsed = combine(Ps, <<>>),
@@ -240,10 +259,10 @@ unparse({var, V}) ->
 unparse({alias, A, V}) ->
     <<(unparse(V))/binary, " AS '", A/binary, "'">>;
 unparse({get, {B, M}}) ->
-    <<"'", M/binary, "' BUCKET '", B/binary, "'">>;
+    <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
 unparse({mget, Fun, {B, M}}) ->
     Funs = list_to_binary(atom_to_list(Fun)),
-    <<Funs/binary, "('", M/binary, "' BUCKET '", B/binary, "')">>;
+    <<Funs/binary, "(", (unparse_metric(M))/binary, " BUCKET '", B/binary, "')">>;
 unparse(N) when is_integer(N)->
     <<(integer_to_binary(N))/binary>>;
 unparse(F) when is_float(F)->

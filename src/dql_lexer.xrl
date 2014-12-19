@@ -1,3 +1,4 @@
+%% -*- erlang -*-
 % DQL lexer - based on the example from https://github.com/relops/leex_yecc_example/blob/master/src/selector_lexer.xrl
 
 Definitions.
@@ -6,8 +7,9 @@ Sign    = [\-+]?
 Digit   = [0-9]
 Float   = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
 
-S       = [A-Za-z][A-Za-z0-9._@-]*
-GS      = [A-Za-z*][A-Za-z0-9*._@-]*
+PART    = '([^']|\.)+'
+MET     = {PART}(\.{PART})+
+S       = [A-Za-z][A-Za-z0-9_@-]*
 WS      = ([\000-\s]|%.*)
 AGGR    = (min|max|empty)
 CAGGR   = (avg|sum)
@@ -50,13 +52,10 @@ percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 {Sign}{Digit}+ : {token, {integer,       TokenLine, i(TokenChars)}}.
 {Sign}{Float}  : {token, {float,         TokenLine, f(TokenChars)}}.
 
-'{S}+'      :   S = strip(TokenChars,   TokenLen),
-                {token, {metric,        TokenLine, b(S)}}.
-{S}         :   {token, {metric,        TokenLine, b(TokenChars)}}.
-'{GS}+'     :   S = strip(TokenChars,   TokenLen),
-                {token, {glob_metric,   TokenLine, b(S)}}.
-{GS}        :   {token, {glob_metric,   TokenLine, b(TokenChars)}}.
-[(),]       :   {token, {a(TokenChars), TokenLine}}.
+{PART}      :   S = strip(TokenChars,   TokenLen),
+                {token, {part,          TokenLine, b(S)}}.
+{S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
+[(),.*]     :   {token, {a(TokenChars), TokenLine}}.
 {WS}+       :   skip_token.
 
 Erlang code.

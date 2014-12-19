@@ -73,12 +73,20 @@ qry_tree(Size) ->
                       ])) || Size > 0]
            )).
 
+bucket() ->
+    non_empty_binary().
+
+metric() ->
+    non_empty_list(non_empty_binary()).
+
+glob_metric() ->
+    non_empty_list(oneof([non_empty_binary(),'*'])).
+
 glob_bm() ->
-    ?LET({B, M},
-         {non_empty_binary(), non_empty_binary()},
-         {B, <<M/binary, ".*">>}).
+    {bucket(), glob_metric()}.
+
 bm() ->
-    {non_empty_binary(), non_empty_binary()}.
+    {bucket(), metric()}.
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),
