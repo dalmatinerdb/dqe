@@ -128,7 +128,7 @@ translate({var, Name}, Aliases, Buckets) ->
     translate(gb_trees:get(Name, Aliases), Aliases, Buckets);
 
 translate({get, {Bucket, Metric}}, _Aliases, _Buckets) ->
-    {dqe_get, [Bucket, Metric]}.
+    {dqe_get, [Bucket, dproto:metric_from_list(Metric)]}.
 
 name({named, N, Q}, Aliases, Buckets) ->
     {N, translate(Q, Aliases, Buckets)};

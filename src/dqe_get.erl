@@ -10,9 +10,9 @@
           chunk :: pos_integer()
          }).
 
-init([Bucket, Metric]) ->
+init([Bucket, Metric]) when is_binary(Metric) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
-    init([Bucket, dproto:metric_from_list(Metric), Chunk]);
+    init([Bucket, Metric, Chunk]);
 
 init([Bucket, Metric, Chunk]) ->
     {ok, #state{bucket = Bucket, metric = Metric, chunk = Chunk}, []}.
