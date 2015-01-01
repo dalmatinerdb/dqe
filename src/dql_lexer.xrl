@@ -8,6 +8,9 @@ Digit   = [0-9]
 Float   = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
 
 PART    = '([^']|\.)+'
+%'% damn you syntax highlighter
+DATE    = "([^"]|\.)+"
+%"% damn you syntax highlighter
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
 WS      = ([\000-\s]|%.*)
@@ -54,6 +57,8 @@ percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 
 {PART}      :   S = strip(TokenChars,   TokenLen),
                 {token, {part,          TokenLine, b(S)}}.
+{DATE}      :   S = strip(TokenChars,   TokenLen),
+                {token, {date,          TokenLine, S}}.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
 [(),.*]     :   {token, {a(TokenChars), TokenLine}}.
 {WS}+       :   skip_token.

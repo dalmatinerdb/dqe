@@ -4,7 +4,7 @@ funs fun selector select timeframe aliases alias resolution int_or_time mb fune
 var pit metric glob_metric part_or_name calculatable bucket.
 
 Terminals '(' ')' ',' '.' '*'
-part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in
+part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
 kw_between kw_and kw_ago kw_now derivate time math percentile float name.
 
 
@@ -82,7 +82,9 @@ timeframe    -> kw_between pit kw_and pit : {between, '$2', '$4'}.
 %% NOW keyword.
 pit          -> int_or_time kw_ago : {ago, '$1'}.
 pit          -> integer : unwrap('$1').
+pit          -> date:  qdate:to_unixtime(unwrap('$1')).
 pit          -> kw_now : now.
+
 
 %% A relative time either given as absolute integer or relative.
 int_or_time  -> integer time : {time, unwrap('$1'), unwrap('$2')}.

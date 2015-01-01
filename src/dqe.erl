@@ -112,6 +112,9 @@ translate({math, divide, SubQ, Arg}, Aliases, Buckets) ->
 translate({aggr, Aggr, SubQ, Time}, Aliases, Buckets) ->
     {dqe_aggr2, [Aggr, translate(SubQ, Aliases, Buckets), dqe_time:to_ms(Time)]};
 
+translate({aggr, Aggr, SubQ, Arg, Time}, Aliases, Buckets) ->
+    {dqe_aggr3, [Aggr, translate(SubQ, Aliases, Buckets), Arg, dqe_time:to_ms(Time)]};
+
 translate({mget, avg, {Bucket, Glob}}, _Aliases, Buckets) ->
     {ok, Metrics} = orddict:fetch(Bucket, Buckets),
     Gets = [{dqe_get, [Bucket, Metric]} || Metric <- glob_match(Glob, Metrics)],
@@ -180,6 +183,9 @@ needs_buckets({math, _Aggr, SubQ, _}, Buckets) ->
     needs_buckets(SubQ, Buckets);
 
 needs_buckets({aggr, _Aggr, SubQ, _}, Buckets) ->
+    needs_buckets(SubQ, Buckets);
+
+needs_buckets({aggr, _Aggr, SubQ, _, _}, Buckets) ->
     needs_buckets(SubQ, Buckets);
 
 needs_buckets({mget, _, {Bucket, _}}, Buckets) ->
