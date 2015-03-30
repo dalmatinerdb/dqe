@@ -29,6 +29,10 @@ IN      = [Ii][Nn]
 NOW     = [Nn][Oo][Ww]
 AGO     = [Aa][Gg][Oo]
 AND     = [Aa][Nn][Dd]
+AFTER   = [Aa][Ff][Tt][Ee][Rr]
+BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
+FOR     = [Ff][Oo][Rr]
+
 
 
 Rules.
@@ -43,6 +47,9 @@ Rules.
 {NOW}       :   {token, {kw_now,        TokenLine}}.
 {AGO}       :   {token, {kw_ago,        TokenLine}}.
 {AND}       :   {token, {kw_and,        TokenLine}}.
+{AFTER}     :   {token, {kw_after,      TokenLine}}.
+{BEFORE}    :   {token, {kw_before,     TokenLine}}.
+{FOR}       :   {token, {kw_for,        TokenLine}}.
 
 derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
 percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.

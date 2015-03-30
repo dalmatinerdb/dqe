@@ -5,7 +5,8 @@ var pit metric glob_metric part_or_name calculatable bucket.
 
 Terminals '(' ')' ',' '.' '*'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
-kw_between kw_and kw_ago kw_now derivate time math percentile float name.
+kw_between kw_and kw_ago kw_now derivate time math percentile float name
+kw_after kw_before kw_for.
 
 
 %%%===================================================================
@@ -75,8 +76,11 @@ alias -> selector kw_as part_or_name : {alias, '$3', '$1'}.
 %%%===================================================================
 
 %% A timeframe for the select statment
-timeframe    -> kw_last int_or_time: {last, '$2'}.
-timeframe    -> kw_between pit kw_and pit : {between, '$2', '$4'}.
+timeframe -> kw_last    int_or_time                    : {last,    '$2'}.
+timeframe -> kw_between pit         kw_and pit         : {between, '$2', '$4'}.
+timeframe -> kw_after   pit         kw_for int_or_time : {'after', '$2', '$4'}.
+timeframe -> kw_before  pit         kw_for int_or_time : {before,  '$2', '$4'}.
+
 
 %% A point in time either a integer, a relative time with a AGO statement or the
 %% NOW keyword.

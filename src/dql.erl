@@ -63,8 +63,12 @@ compute_se({last, N}, Rms) ->
     %%UTCs = calendar:datetime_to_gregorian_seconds(UTC) - 62167219200,
     %%UTCms = (UTCs * 1000) + (NowMs rem 1000),
     RelativeNow = NowMs div Rms,
-    {RelativeNow - N, N}.
+    {RelativeNow - N, N};
 
+compute_se({before, E, D}, _Rms) ->
+    {E - D, E};
+compute_se({'after', S, D}, _Rms) ->
+    {S, S + D}.
 
 preprocess_qry({named, N, Q}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
@@ -253,6 +257,13 @@ unparse({select, Q, T, R}) ->
       (unparse(R))/binary>>;
 unparse({last, Q}) ->
     <<"LAST ", (unparse(Q))/binary>>;
+unparse({between, A, B}) ->
+    <<"BETWEEN ", (unparse(A))/binary, " AND ", (unparse(B))/binary>>;
+unparse({'after', A, B}) ->
+    <<"AFTER ", (unparse(A))/binary, " FOR ", (unparse(B))/binary>>;
+unparse({before, A, B}) ->
+    <<"BEFORE ", (unparse(A))/binary, " FOR ", (unparse(B))/binary>>;
+
 unparse({var, V}) ->
     V;
 
@@ -309,6 +320,12 @@ apply_times({last, L}, R) ->
 
 apply_times({between, S, E}, R) ->
     {between, apply_times(S, R), apply_times(E, R)};
+
+apply_times({'after', S, D}, R) ->
+    {'after', apply_times(S, R), apply_times(D, R)};
+
+apply_times({before, E, D}, R) ->
+    {before, apply_times(E, R), apply_times(D, R)};
 
 apply_times(N, _) when is_integer(N) ->
     N;

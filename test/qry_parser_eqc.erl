@@ -5,7 +5,6 @@
 
 -define(EQC_EUNIT_TIMEUT, 500).
 
--include_lib("eqc/include/eqc_fsm.hrl").
 -include_lib("fqc/include/fqc.hrl").
 -compile(export_all).
 
@@ -41,7 +40,10 @@ qry_tree() ->
            {select,
             non_empty_list(?SIZED(Size, qry_tree(Size))),
             oneof([
-                   {last, 60}
+                   {last, 60},
+                   {between, 60, 10},
+                   {before, 60, 10},
+                   {'after', 60, 10}
                   ]),
             time_type()}
            ]).
