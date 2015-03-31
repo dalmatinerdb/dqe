@@ -47,7 +47,7 @@ xref:
 	$(REBAR) xref skip_deps=true
 
 console: all
-	erl -pa ebin deps/*/ebin -s dqe
+	erl -pa ebin deps/*/ebin 
 
 
 ##

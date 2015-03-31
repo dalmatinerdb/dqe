@@ -66,9 +66,9 @@ compute_se({last, N}, Rms) ->
     {RelativeNow - N, N};
 
 compute_se({before, E, D}, _Rms) ->
-    {E - D, E};
+    {E - D, D};
 compute_se({'after', S, D}, _Rms) ->
-    {S, S + D}.
+    {S, D}.
 
 preprocess_qry({named, N, Q}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
