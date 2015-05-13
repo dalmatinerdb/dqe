@@ -5,7 +5,7 @@
 -export([init/1, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
-          acc :: binary(),
+          acc :: {binary(), binary()} | binary(),
           resolution :: pos_integer()
          }).
 

@@ -1,0 +1,4 @@
+^leexinc.hrl
+^qdate.erl
+^localtime.erl
+^ec_git_vsn.erl
