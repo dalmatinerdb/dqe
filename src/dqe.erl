@@ -56,7 +56,12 @@ run(Query, Timeout) ->
     Sender = {dflow_send, [self(), WaitRef, Funnel]},
     {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
     dflow:start(Flow, {Start, Count}),
-    dflow_send:recv(WaitRef, Timeout).
+    case dflow_send:recv(WaitRef, Timeout) of
+        {ok, Result} ->
+            {ok, Start, Result};
+        E ->
+            E
+    end.
 
 
 %%--------------------------------------------------------------------
