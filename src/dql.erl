@@ -28,9 +28,9 @@ lexer_error(Line, E)  ->
 prepare(S) ->
     case parse(S) of
         {ok, {select, Qx, Aliasesx, Tx, Rx}} ->
-            prepare(Qx, Aliasesx, Tx, Rx);
+            {ok, prepare(Qx, Aliasesx, Tx, Rx)};
         {ok, {select, Qx, Tx, Rx}} ->
-            prepare(Qx, [], Tx, Rx);
+            {ok, prepare(Qx, [], Tx, Rx)};
         E ->
             E
     end.
@@ -48,8 +48,9 @@ prepare(Qs, Aliases, T, R) ->
                             {Q1, A1, M1} = preprocess_qry(Q, AAcc, MAcc, Rms),
                             {[Q1 | QAcc] , A1, M1}
                     end, {[], AliasesF, MetricsF}, Qs),
+    QQ1 = lists:reverse(QQ),
     {Start, Count} = compute_se(T1, Rms),
-    {QQ, Start, Count, Rms, AliasesQ, MetricsQ}.
+    {QQ1, Start, Count, Rms, AliasesQ, MetricsQ}.
 
 compute_se({between, S, E}, _Rms) when E > S->
     {S, E - S};
