@@ -79,7 +79,7 @@ run(Query, Timeout) ->
             {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
             dflow:start(Flow, {Start, Count}),
             case  dflow_send:recv(WaitRef, Timeout) of
-                {ok, Result} ->
+                {ok, [Result]} ->
                     {ok, Start, Result};
                 E ->
                     E
@@ -87,7 +87,6 @@ run(Query, Timeout) ->
         E ->
             E
     end.
-
 
 %%--------------------------------------------------------------------
 %% @doc Prepares query exeuction, this can be used of the query is
