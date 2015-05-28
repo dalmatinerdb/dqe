@@ -14,7 +14,7 @@
 -behaviour(poolboy_worker).
 
 %% API
--export([start_link/1, get/4, list/1, list/0]).
+-export([start_link/1, get/4, list/2, list/1, list/0]).
 -ignore_xref([start_link/2]).
 
 %% gen_server callbacks
@@ -39,6 +39,11 @@ list(Bucket) ->
     poolboy:transaction(backend_connection,
                         fun(Worker) ->
                                 gen_server:call(Worker, {list, Bucket}, ?TIMEOUT)
+                        end, ?TIMEOUT).
+list(Bucket, Prefix) ->
+    poolboy:transaction(backend_connection,
+                        fun(Worker) ->
+                                gen_server:call(Worker, {list, Bucket, Prefix}, ?TIMEOUT)
                         end, ?TIMEOUT).
 
 list() ->
@@ -123,6 +128,10 @@ handle_call({list, Bucket}, _From, State) ->
                     {reply, {ok, Ms}, State}
             end
     end;
+
+handle_call({list, Bucket, Prefix}, _From, State = #state{connection = C}) ->
+    {ok, Ms, C1} = ddb_tcp:list(Bucket, Prefix, C),
+    {reply, {ok, Ms}, State#state{connection = C1}};
 
 handle_call(list, _From, State = #state{connection = C}) ->
     case ddb_tcp:list(C) of
