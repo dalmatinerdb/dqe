@@ -1,7 +1,7 @@
 {application, dqe,
  [
   {description, "DalmatinerDB query engine"},
-  {vsn, "0.1.8"},
+  {vsn, "0.1.9"},
   {registered, []},
   {applications, [
                   kernel,
@@ -9,8 +9,13 @@
                   poolboy,
                   qdate,
                   dflow,
+                  mmath,
+                  dproto,
                   stdlib
                  ]},
   {mod, { dqe_app, []}},
-  {env, []}
+  {env, []},
+  {contributors, ["Heinz N. Gies"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/dalmatinerdb/dqe"}]}
  ]}.

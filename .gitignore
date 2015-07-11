@@ -4,3 +4,4 @@ src/dql_parser.erl
 ebin
 .eunit
 deps
+_build

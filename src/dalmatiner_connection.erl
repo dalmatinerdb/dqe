@@ -8,8 +8,6 @@
 %%%-------------------------------------------------------------------
 -module(dalmatiner_connection).
 
--include_lib("dproto/include/dproto.hrl").
-
 -behaviour(gen_server).
 -behaviour(poolboy_worker).
 

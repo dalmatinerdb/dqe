@@ -1,11 +1,6 @@
 -module(qry_parser_eqc).
 
--ifdef(TEST).
--ifdef(EQC).
-
--define(EQC_EUNIT_TIMEUT, 500).
-
--include_lib("fqc/include/fqc.hrl").
+-include_lib("eqc/include/eqc.hrl").
 -compile(export_all).
 
 -define(P, dql).
@@ -142,6 +137,3 @@ prop_glob_match() ->
             begin
                 M ==  ([S] == ?P:glob_match(G, [S]))
             end).
-
--endif.
--endif.
