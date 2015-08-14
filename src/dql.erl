@@ -58,8 +58,7 @@ compute_se({between, S, E}, _Rms) ->
     {E, S - E};
 
 compute_se({last, N}, Rms) ->
-    _Now = {Mega, Sec, Micro} = now(),
-    NowMs = ((Mega * 1000000  + Sec) * 1000000 + Micro) div 1000,
+    NowMs = erlang:system_time(milli_seconds),
     %%UTC = calendar:now_to_universal_time(Now),
     %%UTCs = calendar:datetime_to_gregorian_seconds(UTC) - 62167219200,
     %%UTCms = (UTCs * 1000) + (NowMs rem 1000),
@@ -332,13 +331,11 @@ apply_times(N, _) when is_integer(N) ->
     N;
 
 apply_times(now, R) ->
-    _Now = {Mega, Sec, Micro} = now(),
-    NowMs = ((Mega * 1000000  + Sec) * 1000000 + Micro) div 1000,
+    NowMs = erlang:system_time(milli_seconds),
     NowMs div R;
 
 apply_times({ago, T}, R) ->
-    _Now = {Mega, Sec, Micro} = now(),
-    NowMs = ((Mega * 1000000  + Sec) * 1000000 + Micro) div 1000,
+    NowMs = erlang:system_time(milli_seconds),
     (NowMs - to_ms(T)) div R;
 
 apply_times(T, R) ->

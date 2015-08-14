@@ -4,7 +4,7 @@
 
 -export([init/1, describe/1, start/2, emit/3, done/2]).
 
--record(state, {start = now()}).
+-record(state, {start = erlang:system_time(milli_seconds)}).
 
 init([SubQ]) when not is_list(SubQ) ->
     {ok, #state{}, SubQ}.
@@ -24,6 +24,6 @@ emit(Child, {Data, Resolution}, State) ->
     {emit, {Data, Resolution}, State}.
 
 done({last, Child}, State = #state{start = Start}) ->
-    Diff  = round(timer:now_diff(now(), Start) / 1000),
+    Diff  = Start - erlang:system_time(milli_seconds),
     io:format("[~p] Finished after ~pms.~n", [Child, Diff]),
     {done, State}.

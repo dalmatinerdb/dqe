@@ -117,9 +117,9 @@ handle_call({list, Bucket}, _From, State) ->
             {Ms, State1} = do_list(Bucket, State),
             {reply, {ok, Ms}, State1};
         {value, {LastRead, Ms}} ->
-            case timer:now_diff(now(), LastRead) div 100000000 of
+            Now = erlang:system_time(seconds),
+            case Now - LastRead of
                 T when T > 60  ->
-                    io:format("~p - ~p: ~p~n", [now(), LastRead, T/100000000]),
                     {Ms, State1} = do_list(Bucket, State),
                     {reply, {ok, Ms}, State1};
                 _ ->
@@ -203,5 +203,5 @@ code_change(_OldVsn, State, _Extra) ->
 
 do_list(Bucket, State = #state{connection = C}) ->
     {ok, Ms, C1} = ddb_tcp:list(Bucket, C),
-    Tree1 = gb_trees:enter(Bucket, {now(), Ms}, State#state.metrics),
+    Tree1 = gb_trees:enter(Bucket, {erlang:system_time(seconds), Ms}, State#state.metrics),
     {Ms, State#state{metrics = Tree1, connection = C1}}.
