@@ -81,8 +81,7 @@ start_link(Args) ->
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
 	{ok, MaxRead} = application:get_env(dqe, max_read),
-    {ok, C} = ddb_tcp:connect(Host, Port),
-    {ok, #state{connection = C, max_read=MaxRead}}.
+    {ok, #state{max_read=MaxRead, host = Host, port = Port}, 0}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -167,6 +166,10 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info(_Info, State = #state{host = Host, port = Port}) ->
+    {ok, C} = ddb_tcp:connect(Host, Port),
+    {noreply, State#state{connection = C}};
+
 handle_info(_Info, State) ->
     {noreply, State}.
 
