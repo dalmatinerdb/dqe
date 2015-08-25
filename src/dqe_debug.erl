@@ -16,14 +16,14 @@ start({_Start, _Count}, State) ->
     {ok, State}.
 
 emit(Child, {Name, Data, Resolution}, State) ->
-    io:format("[~p:~s] ~p~n", [Child, Name, mmath_bin:to_list(Data)]),
+    lager:debug("[dqe|~p:~s] ~p~n", [Child, Name, mmath_bin:to_list(Data)]),
     {emit, {Name, Data, Resolution}, State};
 
 emit(Child, {Data, Resolution}, State) ->
-    io:format("[~p] ~p~n", [Child, mmath_bin:to_list(Data)]),
+    lager:debug("[dqe|~p] ~p~n", [Child, mmath_bin:to_list(Data)]),
     {emit, {Data, Resolution}, State}.
 
 done({last, Child}, State = #state{start = Start}) ->
     Diff  = Start - erlang:system_time(milli_seconds),
-    io:format("[~p] Finished after ~pms.~n", [Child, Diff]),
+    lager:debug("[dqe|~p] Finished after ~pms.~n", [Child, Diff]),
     {done, State}.

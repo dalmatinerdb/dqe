@@ -12,7 +12,7 @@ clean:
 	$(REBAR) clean
 
 qc: clean all
-	$(REBAR) eqc
+	$(REBAR) as eqc eqc
 
 test: qc
 

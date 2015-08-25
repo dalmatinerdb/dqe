@@ -72,10 +72,8 @@ run(Query, Timeout) ->
     case prepare(Query) of
         {ok, {Parts, Start, Count}} ->
             WaitRef = make_ref(),
-            io:format("Parts-> ~p~n", [Parts]),
             Funnel = {dqe_funnel, [[{dqe_collect, [Part]} || Part <- Parts]]},
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
-            io:format("Sender: ~p~n", [Sender]),
             {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
             dflow:start(Flow, {Start, Count}),
             case  dflow_send:recv(WaitRef, Timeout) of

@@ -9,6 +9,8 @@
   {git,"git://github.com/erlware/erlware_commons.git",
        {ref,"83adceaa1abc1af5358a61601b17d10c43e6d7a1"}},
   1},
+ {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.6">>},1},
+ {<<"lager">>,{pkg,<<"lager">>,<<"2.1.1">>},0},
  {<<"mmath">>,{pkg,<<"mmath">>,<<"0.1.7">>},0},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},0},
  {<<"qdate">>,
