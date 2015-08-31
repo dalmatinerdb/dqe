@@ -184,10 +184,28 @@ translate({aggr, Aggr, SubQ}, Aliases, Buckets) ->
             E
     end;
 
+translate({math, multiply, SubQ, Arg}, Aliases, Buckets)
+  when is_integer(Arg) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_math, [mul, SubQ1, Arg]}};
+        E ->
+            E
+    end;
+
 translate({math, multiply, SubQ, Arg}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
             {ok, {dqe_math, [scale, SubQ1, Arg]}};
+        E ->
+            E
+    end;
+
+translate({math, divide, SubQ, Arg}, Aliases, Buckets)
+  when is_integer(Arg) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_math, [divide, SubQ1, Arg]}};
         E ->
             E
     end;
@@ -222,7 +240,7 @@ translate({mget, avg, {Bucket, Glob}}, _Aliases, Buckets) ->
         {ok, Metrics1} ->
             Gets = [{dqe_get, [Bucket, Metric]} || Metric <- Metrics1],
             Gets1 = keep_optimizing_mget(Gets),
-            {ok, {dqe_math, [scale, {dqe_mget, [Gets1]}, 1/length(Gets)]}};
+            {ok, {dqe_math, [divide, {dqe_mget, [Gets1]}, length(Gets)]}};
         E ->
             E
     end;
