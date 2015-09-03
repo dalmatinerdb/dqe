@@ -176,19 +176,25 @@ compress_prefixes([A, B | R], Acc) ->
 %% @end
 %%--------------------------------------------------------------------
 
-translate({aggr, Aggr, SubQ}, Aliases, Buckets) ->
+%%--------------------------------------------------------------------
+%% One value aggregates
+%%--------------------------------------------------------------------
+translate({aggr, derivate, SubQ}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_aggr1, [Aggr, SubQ1]}};
+            {ok, {dqe_aggr1, [derivate_r, SubQ1]}};
         E ->
             E
     end;
 
+%%--------------------------------------------------------------------
+%% Math
+%%--------------------------------------------------------------------
 translate({math, multiply, SubQ, Arg}, Aliases, Buckets)
   when is_integer(Arg) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [mul, SubQ1, Arg]}};
+            {ok, {dqe_math, [mul_r, SubQ1, Arg]}};
         E ->
             E
     end;
@@ -196,7 +202,7 @@ translate({math, multiply, SubQ, Arg}, Aliases, Buckets)
 translate({math, multiply, SubQ, Arg}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [scale, SubQ1, Arg]}};
+            {ok, {dqe_math, [scale_r, SubQ1, Arg]}};
         E ->
             E
     end;
@@ -205,7 +211,7 @@ translate({math, divide, SubQ, Arg}, Aliases, Buckets)
   when is_integer(Arg) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [divide, SubQ1, Arg]}};
+            {ok, {dqe_math, [divide_r, SubQ1, Arg]}};
         E ->
             E
     end;
@@ -213,23 +219,58 @@ translate({math, divide, SubQ, Arg}, Aliases, Buckets)
 translate({math, divide, SubQ, Arg}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [scale, SubQ1, 1/Arg]}};
+            {ok, {dqe_math, [scale_r, SubQ1, 1/Arg]}};
         E ->
             E
     end;
 
-translate({aggr, Aggr, SubQ, Time}, Aliases, Buckets) ->
+%%--------------------------------------------------------------------
+%% Two argument aggregaets
+%%--------------------------------------------------------------------
+translate({aggr, min, SubQ, Time}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [Aggr, SubQ1, dqe_time:to_ms(Time)]}};
+            {ok, {dqe_aggr2, [min_r, SubQ1, dqe_time:to_ms(Time)]}};
         E ->
             E
     end;
 
-translate({aggr, Aggr, SubQ, Arg, Time}, Aliases, Buckets) ->
+translate({aggr, max, SubQ, Time}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_aggr3, [Aggr, SubQ1, Arg, dqe_time:to_ms(Time)]}};
+            {ok, {dqe_aggr2, [max_r, SubQ1, dqe_time:to_ms(Time)]}};
+        E ->
+            E
+    end;
+
+translate({aggr, empty, SubQ, Time}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_aggr2, [empty_r, SubQ1, dqe_time:to_ms(Time)]}};
+        E ->
+            E
+    end;
+
+translate({aggr, sum, SubQ, Time}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_aggr2, [sum_r, SubQ1, dqe_time:to_ms(Time)]}};
+        E ->
+            E
+    end;
+
+translate({aggr, avg, SubQ, Time}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_aggr2, [avg_r, SubQ1, dqe_time:to_ms(Time)]}};
+        E ->
+            E
+    end;
+
+translate({aggr, percentile, SubQ, Arg, Time}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_aggr3, [percentile, SubQ1, Arg, dqe_time:to_ms(Time)]}};
         E ->
             E
     end;
@@ -240,7 +281,7 @@ translate({mget, avg, {Bucket, Glob}}, _Aliases, Buckets) ->
         {ok, Metrics1} ->
             Gets = [{dqe_get, [Bucket, Metric]} || Metric <- Metrics1],
             Gets1 = keep_optimizing_mget(Gets),
-            {ok, {dqe_math, [divide, {dqe_mget, [Gets1]}, length(Gets)]}};
+            {ok, {dqe_math, [divide_r, {dqe_mget, [Gets1]}, length(Gets)]}};
         E ->
             E
     end;
