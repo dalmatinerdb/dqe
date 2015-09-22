@@ -79,6 +79,8 @@ run(Query, Timeout) ->
             case  dflow_send:recv(WaitRef, Timeout) of
                 {ok, [Result]} ->
                     {ok, Start, Result};
+                {ok, []} ->
+                    {error, no_results};
                 E ->
                     E
             end;
