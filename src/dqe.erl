@@ -48,7 +48,7 @@ glob_to_string(G) ->
 
 -spec run(Query :: string()) ->
                  {error, _} |
-                 {ok, query_reply()}.
+                 {ok, Start::pos_integer(), query_reply()}.
 run(Query) ->
     run(Query, infinity).
 
@@ -66,7 +66,7 @@ run(Query) ->
 
 -spec run(Query :: string(), Timeout :: pos_integer() | infinity) ->
                  {error, _} |
-                 {ok, query_reply()}.
+                 {ok, Start::pos_integer(), query_reply()}.
 
 run(Query, Timeout) ->
     case prepare(Query) of
