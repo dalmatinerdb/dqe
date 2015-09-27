@@ -300,7 +300,7 @@ translate({mget, sum, {Bucket, Glob}}, _Aliases, Buckets) ->
     end;
 
 translate({var, Name}, Aliases, Buckets) ->
-    case gb_trees:get(Name, Aliases) of
+    case gb_trees:lookup(Name, Aliases) of
         {value, Resolved} ->
             translate(Resolved, Aliases, Buckets);
         _ ->
