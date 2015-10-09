@@ -22,8 +22,14 @@ emit(Child, Data, State = #state{buffer = Buffer}) ->
     {ok, State1}.
 
 
+done({last, _}, State = #state{buffer = []}) ->
+    {done, {error, no_results}, State};
+
 done({last, _}, State = #state{buffer = B, refs = Rs}) ->
-    Data = [orddict:fetch(R, B) || R <- Rs],
+    Data = [case orddict:find(R, B) of
+             error -> [];
+              {ok, V} -> V
+            end || R <- Rs],
     {done, Data, State};
 
 done(_O, State) ->

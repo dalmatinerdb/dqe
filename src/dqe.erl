@@ -77,6 +77,8 @@ run(Query, Timeout) ->
             {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
             dflow:start(Flow, {Start, Count}),
             case  dflow_send:recv(WaitRef, Timeout) of
+                {ok, [{error, no_results}]} ->
+                    {error, no_results};
                 {ok, [Result]} ->
                     {ok, Start, Result};
                 {ok, []} ->
