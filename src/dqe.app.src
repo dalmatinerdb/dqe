@@ -1,11 +1,11 @@
 {application,dqe,
              [{description,"DalmatinerDB query engine"},
-              {vsn,"0.1.20"},
+              {vsn,"0.1.21"},
               {registered,[]},
               {applications,[kernel,ddb_client,poolboy,qdate,dflow,mmath,
                              dproto,stdlib]},
               {mod,{dqe_app,[]}},
               {env,[]},
-              {contributors,["Heinz N. Gies"]},
+              {maintainers,["Heinz N. Gies"]},
               {licenses,["MIT"]},
               {links,[{"Github","https://github.com/dalmatinerdb/dqe"}]}]}.

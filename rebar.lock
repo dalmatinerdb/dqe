@@ -1,4 +1,4 @@
-[{<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.1.16">>},0},
+[{<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.1.17">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.5">>},0},
  {<<"dproto">>,{pkg,<<"dproto">>,<<"0.1.12">>},0},
  {<<"erlang_localtime">>,
