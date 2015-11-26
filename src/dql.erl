@@ -328,18 +328,18 @@ apply_times({before, E, D}, R) ->
     {before, apply_times(E, R), apply_times(D, R)};
 
 apply_times(N, _) when is_integer(N) ->
-    erlang:min(1, N);
+    erlang:max(1, N);
 
 apply_times(now, R) ->
     NowMs = erlang:system_time(milli_seconds),
-    erlang:min(1, NowMs div R);
+    erlang:max(1, NowMs div R);
 
 apply_times({ago, T}, R) ->
     NowMs = erlang:system_time(milli_seconds),
     erlang:min(1, (NowMs - to_ms(T)) div R);
 
 apply_times(T, R) ->
-    erlang:min(1, to_ms(T) div R).
+    erlang:max(1, to_ms(T) div R).
 
 to_ms({time, N, ms}) ->
     N;
