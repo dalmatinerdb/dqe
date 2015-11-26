@@ -4,10 +4,10 @@
 
 
 apply_times(T, R)  when is_integer(T) ->
-    T div R;
+    erlang:max(1, T div R);
 
 apply_times(T, R) ->
-    to_ms(T) div R.
+    erlang:max(1, to_ms(T) div R).
 
 to_ms({time, N, ms}) ->
     N;

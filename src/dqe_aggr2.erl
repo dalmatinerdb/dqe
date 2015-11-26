@@ -20,7 +20,7 @@ start({_Start, _Count}, State) ->
     {ok, State}.
 
 describe(#state{aggr = Aggr, time = Time}) ->
-    [atom_to_list(Aggr), "(", integer_to_list(round(Time/1000)), "ms)"].
+    [atom_to_list(Aggr), "(", integer_to_list(Time), "ms)"].
 
 %% When we get the first data we can calculate both the applied
 %% time and the upwards resolution.
