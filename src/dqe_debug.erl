@@ -16,12 +16,12 @@ start({_Start, _Count}, State) ->
     {ok, State}.
 
 emit(Child, {Name, Data, Resolution}, State) ->
-    lager:debug("[dqe|~p:~s] ~p~n", [Child, Name, 
-                                     mmath_bin:to_list(math_bin:derealize(Data))]),
+    lager:debug("[dqe|~p:~s] ~p~n", [Child, Name,
+                                     mmath_bin:to_list(mmath_bin:derealize(Data))]),
     {emit, {Name, Data, Resolution}, State};
 
 emit(Child, {Data, Resolution}, State) ->
-    lager:debug("[dqe|~p] ~p~n", [Child, mmath_bin:to_list(math_bin:derealize(Data))]),
+    lager:debug("[dqe|~p] ~p~n", [Child, mmath_bin:to_list(mmath_bin:derealize(Data))]),
     {emit, {Data, Resolution}, State}.
 
 done({last, Child}, State = #state{start = Start}) ->

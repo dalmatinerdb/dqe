@@ -24,6 +24,12 @@ error_string({error, {not_found, {var, Name}}}) ->
 error_string({error, {not_found, {glob, Glob}}}) ->
     ["No series is matching ", glob_to_string(Glob), "!"];
 
+error_string({error,no_results}) ->
+    "No results were returned for the query.";
+
+error_string({error, A}) when is_atom(A) ->
+    atom_to_list(A);
+
 error_string({error, B}) when is_binary(B) ->
     binary_to_list(B).
 

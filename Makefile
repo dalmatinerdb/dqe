@@ -1,41 +1,10 @@
-REBAR = $(shell pwd)/rebar3
+REBAR = rebar3
 
-.PHONY: deps rel package
+.PHONY: all test tree
 
 all: compile
 
-compile:
-	$(REBAR) compile
+include fifo.mk
 
 clean:
-	-rm -r .eunit
 	$(REBAR) clean
-
-qc: clean all
-	$(REBAR) as eqc eqc
-
-test: qc
-
-bench: all
-	-rm -r .eunit
-	$(REBAR) -D BENCH skip_deps=true eunit
-
-###
-### Docs
-###
-docs:
-	$(REBAR) edoc
-
-##
-## Developer targets
-##
-
-xref:
-	$(REBAR) xref
-
-##
-## Dialyzer
-##
-
-dialyzer:
-	$(REBAR) dialyzer
