@@ -18,6 +18,11 @@
                          Data :: binary(),
                          Resolution :: pos_integer()}].
 
+-type query_error() :: {'error', 'no_results' |
+                        'timeout' |
+                        binary() |
+                        {'not_found',{binary(), binary()}}}.
+
 error_string({error, {not_found, {var, Name}}}) ->
     ["Variable '", Name, "' referenced but not defined!"];
 
@@ -53,7 +58,7 @@ glob_to_string(G) ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string()) ->
-                 {error, _} |
+                 query_error() |
                  {ok, Start::pos_integer(), query_reply()}.
 run(Query) ->
     run(Query, infinity).
@@ -131,15 +136,43 @@ prepare(Query) ->
                          {Bkt, Ps2}
                  end
                  || {Bkt, Ps} <- Buckets1],
-            case name_parts(Parts, [], Aliases, Buckets2) of
-                {ok, Parts1} ->
-                    {ok, {Parts1, Start, Count}};
+            Parts1 = expand_parts(Parts, Buckets2),
+            case name_parts(Parts1, [], Aliases, Buckets2) of
+                {ok, Parts2} ->
+                    {ok, {Parts2, Start, Count}};
                 E ->
                     E
             end;
         E ->
             E
     end.
+
+expand_parts(Parts, Buckets) ->
+    Parts1 = [expand_part(P, Buckets) || P <- Parts],
+    lists:flatten(Parts1).
+
+expand_part({named, N, P}, Buckets) ->
+    %% TODO adjust the name here!
+    [{named, update_name(N, M, G), P1}
+     || {M, G, P1} <- expand_part(P, Buckets)];
+expand_part({combine, Fun, Parts}, Buckets) ->
+    Parts1 = [P || {_, _, P} <- expand_parts(Parts, Buckets)],
+    [{keep, keep, {combine, Fun, Parts1}}];
+expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
+    Ms = orddict:fetch(B, Buckets),
+    {ok, Selected} = glob_match(G, Ms),
+    %% TODO adjust the name here!
+    [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected].
+
+
+
+update_name(Name, keep, keep) ->
+    Name;
+update_name(Name, Metric, Glob) ->
+    MList = dproto:metric_to_list(Metric),
+    GStr = dql:unparse_metric(Glob),
+    MStr = dql:unparse_metric(MList),
+    binary:replace(Name, GStr, MStr).
 
 name_parts([Q | R], Acc, Aliases, Buckets) ->
     case name(Q, Aliases, Buckets) of
@@ -186,6 +219,35 @@ compress_prefixes([A, B | R], Acc) ->
 %% @end
 %%--------------------------------------------------------------------
 
+
+translate({calc, [], {get, {Bucket, Metric}}}, _Aliases, _Buckets) ->
+    {ok, {dqe_get, [Bucket, Metric]}};
+
+%% TODO we can do this better!
+translate({calc, Aggrs, G}, Aliases, Buckets) ->
+    FoldFn = fun({Type, Fun}, Acc) ->
+                     {Type, Fun, Acc};
+                 ({Type, Fun, Arg1}, Acc) ->
+                     {Type, Fun, Acc, Arg1};
+                 ({Type, Fun, Arg1, Arg2}, Acc) ->
+                     {Type, Fun, Acc, Arg1, Arg2}
+             end,
+    Recursive = lists:foldl(FoldFn, G, Aggrs),
+    translate(Recursive, Aliases, Buckets);
+
+translate({combine, Fun, Parts}, Aliases, Buckets) ->
+    Parts1 = [translate(P, Aliases, Buckets) || P <- Parts],
+    Parts2 = [P || {ok, P} <- Parts1],
+    Parts3 = keep_optimizing_sum(Parts2),
+    %% TODO: this is a hack we need to fix the optimisation!
+    Parts4 = lists:flatten(Parts3),
+    case Fun of
+        sum ->
+            {ok, {dqe_sum, [Parts4]}};
+        avg ->
+            {ok, {dqe_math, [divide_r, {dqe_sum, [Parts4]}, length(Parts)]}}
+    end;
+
 %%--------------------------------------------------------------------
 %% One value aggregates
 %%--------------------------------------------------------------------
@@ -197,9 +259,12 @@ translate({aggr, derivate, SubQ}, Aliases, Buckets) ->
             E
     end;
 
+
+
 %%--------------------------------------------------------------------
 %% Math
 %%--------------------------------------------------------------------
+
 translate({math, multiply, SubQ, Arg}, Aliases, Buckets)
   when is_integer(Arg) ->
     case translate(SubQ, Aliases, Buckets) of
@@ -285,28 +350,6 @@ translate({aggr, percentile, SubQ, Arg, Time}, Aliases, Buckets) ->
             E
     end;
 
-translate({mget, avg, {Bucket, Glob}}, _Aliases, Buckets) ->
-    Metrics = orddict:fetch(Bucket, Buckets),
-    case glob_match(Glob, Metrics) of
-        {ok, Metrics1} ->
-            Gets = [{dqe_get, [Bucket, Metric]} || Metric <- Metrics1],
-            Gets1 = keep_optimizing_mget(Gets),
-            {ok, {dqe_math, [divide_r, {dqe_mget, [Gets1]}, length(Gets)]}};
-        E ->
-            E
-    end;
-
-translate({mget, sum, {Bucket, Glob}}, _Aliases, Buckets) ->
-    Metrics = orddict:fetch(Bucket, Buckets),
-    case glob_match(Glob, Metrics) of
-        {ok, Metrics1} ->
-            Gets = [{dqe_get, [Bucket, Metric]} || Metric <- Metrics1],
-            Gets1 = keep_optimizing_mget(Gets),
-            {ok, {dqe_mget, [Gets1]}};
-        E ->
-            E
-    end;
-
 translate({var, Name}, Aliases, Buckets) ->
     case gb_trees:lookup(Name, Aliases) of
         {value, Resolved} ->
@@ -315,8 +358,9 @@ translate({var, Name}, Aliases, Buckets) ->
             {error, {not_found, {var, Name}}}
     end;
 
-translate({get, {Bucket, Metric}}, _Aliases, _Buckets) ->
-    {ok, {dqe_get, [Bucket, dproto:metric_from_list(Metric)]}}.
+translate({get, {Bucket, Metric}}, _Aliases, _Buckets) when is_binary(Metric) ->
+    %%{ok, {dqe_get, [Bucket, dproto:metric_from_list(Metric)]}}.
+    {ok, {dqe_get, [Bucket, Metric]}}.
 
 name({named, N, Q}, Aliases, Buckets) ->
     case translate(Q, Aliases, Buckets) of
@@ -324,33 +368,25 @@ name({named, N, Q}, Aliases, Buckets) ->
             {ok, {N, Q1}};
         E ->
             E
-    end;
-
-name(Q, Aliases, Buckets) ->
-    case translate(Q, Aliases, Buckets) of
-        {ok, Q1} ->
-            {ok, {dql:unparse(Q), Q1}};
-        E ->
-            E
     end.
 
-keep_optimizing_mget([_, _, _, _, _ | _] = Gets) ->
-    keep_optimizing_mget(optimize_mget(Gets));
-keep_optimizing_mget(Gets) ->
+keep_optimizing_sum([_, _, _, _, _ | _] = Gets) ->
+    keep_optimizing_sum(optimize_sum(Gets));
+keep_optimizing_sum(Gets) ->
     Gets.
 
-optimize_mget([G1, G2, G3, G4]) ->
-    [{dqe_mget, [[G1, G2, G3, G4]]}];
+optimize_sum([G1, G2, G3, G4]) ->
+    [{dqe_sum, [[G1, G2, G3, G4]]}];
 
-optimize_mget([G1, G2, G3, G4 | GRest]) ->
-    [{dqe_mget, [[G1, G2, G3, G4]]} | optimize_mget(GRest)];
+optimize_sum([G1, G2, G3, G4 | GRest]) ->
+    [{dqe_sum, [[G1, G2, G3, G4]]} | optimize_sum(GRest)];
 
 
-optimize_mget([Get]) ->
+optimize_sum([Get]) ->
     [Get];
 
-optimize_mget(Gets) ->
-    [{dqe_mget, [Gets]}].
+optimize_sum(Gets) ->
+    [{dqe_sum, [Gets]}].
 
 
 glob_match(G, Ms) ->
@@ -385,6 +421,12 @@ rmatch(_, _) ->
 needs_buckets(L,  Buckets) when is_list(L) ->
     lists:foldl(fun needs_buckets/2, Buckets, L);
 
+needs_buckets({combine, _Func, Steps}, Buckets) ->
+    lists:foldl(fun needs_buckets/2, Buckets, Steps);
+
+needs_buckets({calc, _Steps, {sget, {Bucket, Glob}}}, Buckets) ->
+    orddict:append(Bucket, glob_prefix(Glob, []), Buckets);
+
 needs_buckets({aggr, _Aggr, SubQ}, Buckets) ->
     needs_buckets(SubQ, Buckets);
 
@@ -396,9 +438,6 @@ needs_buckets({aggr, _Aggr, SubQ, _}, Buckets) ->
 
 needs_buckets({aggr, _Aggr, SubQ, _, _}, Buckets) ->
     needs_buckets(SubQ, Buckets);
-
-needs_buckets({mget, _, {Bucket, Glob}}, Buckets) ->
-    orddict:append(Bucket, glob_prefix(Glob, []), Buckets);
 
 needs_buckets({named, _, SubQ}, Buckets) ->
     needs_buckets(SubQ, Buckets);

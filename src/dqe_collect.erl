@@ -26,7 +26,6 @@ emit(_C, {Name, Data, Resolution}, State = #state{resolution = undefined}) ->
 emit(_C, {Data, Resolution}, State = #state{resolution = undefined}) ->
     {ok, State#state{resolution = Resolution, acc = Data}};
 
-
 emit(_C, {Name, Data, _R}, State = #state{acc = {Name, Acc}}) ->
     {ok, State#state{acc = {Name, <<Acc/binary, Data/binary>>}}};
 
