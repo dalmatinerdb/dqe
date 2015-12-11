@@ -1,6 +1,6 @@
 {application,dqe,
              [{description,"DalmatinerDB query engine"},
-              {vsn,"0.1.25"},
+              {vsn,"0.1.26"},
               {registered,[]},
               {applications,[kernel,ddb_client,poolboy,qdate,dflow,mmath,
                              dproto,stdlib]},
