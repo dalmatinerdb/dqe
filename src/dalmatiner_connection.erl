@@ -126,6 +126,10 @@ handle_call({list, Bucket}, _From, State) ->
             end
     end;
 
+handle_call({list, Bucket, <<>>}, _From, State = #state{connection = C}) ->
+    {ok, Ms, C1} = ddb_tcp:list(Bucket, C),
+    {reply, {ok, Ms}, State#state{connection = C1}};
+
 handle_call({list, Bucket, Prefix}, _From, State = #state{connection = C}) ->
     {ok, Ms, C1} = ddb_tcp:list(Bucket, Prefix, C),
     {reply, {ok, Ms}, State#state{connection = C1}};
