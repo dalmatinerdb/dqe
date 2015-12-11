@@ -1,7 +1,7 @@
 %% -*- erlang -*-
 Nonterminals
 funs fun selector select timeframe aliases alias resolution int_or_time mb fune
-var pit metric glob_metric part_or_name calculatable bucket.
+var pit metric glob_metric part_or_name calculatable bucket gmb calculatables.
 
 Terminals '(' ')' ',' '.' '*'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
@@ -41,11 +41,14 @@ calculatable -> var : '$1'.
 %% * a selector that can be retrived
 calculatable -> selector : '$1'.
 
+calculatables -> calculatable : ['$1'].
+calculatables -> calculatable ',' calculatables : ['$1'] ++ '$3'.
 
 %% A aggregation function
 fun -> derivate '(' calculatable ')' : {aggr, derivate, '$3'}.
 fun -> percentile '(' calculatable ',' float ',' int_or_time ')' : {aggr, percentile, '$3', unwrap('$5'), '$7'}.
 fun -> aggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> caggr '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
 fun -> caggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
 fun -> math '(' calculatable ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
 
@@ -54,11 +57,12 @@ var -> part_or_name : {var, '$1'}.
 
 %% A selector, either a combination of <metric> BUCKET <bucket> or a mget aggregate.
 selector -> mb : {get, '$1'}.
-selector -> caggr '(' glob_metric kw_bucket bucket ')': {mget, unwrap('$1'), {'$5', '$3'}}.
-selector -> caggr '(' metric kw_bucket bucket ')': {mget, unwrap('$1'), {'$5', '$3'}}.
+selector -> gmb : {sget, '$1'}.
 
 %% A bucket and metric combination used as a solution
 mb -> metric kw_bucket part_or_name : {'$3', '$1'}.
+
+gmb -> glob_metric kw_bucket bucket : {'$3', '$1'}.
 
 %%%===================================================================
 %%% From section, aliased selectors

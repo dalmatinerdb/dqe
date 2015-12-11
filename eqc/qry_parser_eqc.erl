@@ -29,45 +29,60 @@ aggr_range() ->
 non_empty_list(T) ->
     ?SUCHTHAT(L, list(T), L /= []).
 
+rel_time() ->
+    oneof([
+           pos_int(),
+           now,
+           {ago, pos_int()}
+          ]).
+
 
 qry_tree() ->
-    oneof([
-           {select,
-            non_empty_list(?SIZED(Size, qry_tree(Size))),
-            oneof([
-                   {last, 60},
-                   {between, 60, 10},
-                   {before, 60, 10},
-                   {'after', 60, 10}
-                  ]),
-            time_type()}
-           ]).
+    {select,
+     non_empty_list(?SIZED(Size, qry_tree(Size))),
+     oneof([
+            {last, pos_int()},
+            {between, rel_time(), pos_int()},
+            {before, rel_time(), pos_int()},
+            {'after', pos_int(), pos_int()}
+           ]),
+     time_type()}.
 
+comb_fun() ->
+    oneof([sum, avg]).
+aggr_fun() ->
+    oneof([sum, min, max, avg]).
 
 percentile() ->
     ?SUCHTHAT(N, real(), N > 0 andalso N =< 1).
 
+comb_tree(Size) ->
+    ?LETSHRINK(
+       [QL, QR], [qry_tree(Size - 1), qry_tree(Size - 1)],
+       {combine, comb_fun(), [QL, QR]}).
+aggr_tree(Size) ->
+    ?LETSHRINK(
+       [Q], [qry_tree(Size - 1)],
+       oneof(
+         [
+          {combine, comb_fun(), [Q]},
+          {aggr, derivate, Q},
+          {aggr, percentile, Q, percentile(), aggr_range()},
+          {aggr, aggr_fun(), Q, aggr_range()},
+          {math, multiply, Q, pos_int()},
+          {math, divide, Q, pos_int()}
+         ])).
+
+qry_tree(0) ->
+    oneof([
+           {get, bm()},
+           {sget, glob_bm()}
+          ]);
+
 qry_tree(Size) ->
-    ?LAZY(oneof(
-            [
-             oneof([
-                    {get, bm()},
-                    {mget, sum, glob_bm()},
-                    {mget, avg, glob_bm()}
-                   ]) || Size == 0] ++
-                [?LETSHRINK(
-                    [Q], [qry_tree(Size - 1)],
-                    oneof(
-                      [
-                       {aggr, derivate, Q},
-                       {aggr, percentile, Q, percentile(), aggr_range()},
-                       {aggr, min, Q, aggr_range()},
-                       {aggr, max, Q, aggr_range()},
-                       {aggr, sum, Q, aggr_range()},
-                       {aggr, avg, Q, aggr_range()},
-                       {math, multiply, Q, pos_int()},
-                       {math, divide, Q, pos_int()}
-                      ])) || Size > 0]
+    ?LAZY(frequency(
+            [{1, comb_tree(Size)},
+             {10, aggr_tree(Size)}]
            )).
 
 bucket() ->
@@ -77,7 +92,9 @@ metric() ->
     non_empty_list(non_empty_binary()).
 
 glob_metric() ->
-    non_empty_list(oneof([non_empty_binary(),'*'])).
+    ?SUCHTHAT(L,
+              non_empty_list(oneof([non_empty_binary(),'*'])),
+              lists:member('*', L)).
 
 glob_bm() ->
     {bucket(), glob_metric()}.
@@ -125,11 +142,17 @@ prop_qery_parse_unparse() ->
     ?FORALL(T, qry_tree(),
             begin
                 Unparsed = ?P:unparse(T),
-                {ok, ReParsed} = ?P:parse(Unparsed),
-                ?WHENFAIL(
-                   io:format(user, "   ~p~n-> ~p~n-> ~p~n",
-                             [T, Unparsed, ReParsed]),
-                   T == ReParsed)
+                case ?P:parse(Unparsed) of
+                    {ok, ReParsed} ->
+                        ?WHENFAIL(
+                           io:format(user, "   ~p~n-> ~p~n-> ~p~n",
+                                     [T, Unparsed, ReParsed]),
+                           T == ReParsed);
+                    {error, E} ->
+                        io:format(user, "   ~p~n-> ~p~n-> ~p~n",
+                                  [T, Unparsed, E]),
+                        false
+                end
             end).
 
 prop_glob_match() ->

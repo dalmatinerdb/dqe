@@ -185,7 +185,7 @@ handle_info(_Info, State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, #state{connection = C}) ->
-    ddb_tcp:close(C),
+    _ = ddb_tcp:close(C),
     ok.
 
 %%--------------------------------------------------------------------
@@ -206,5 +206,6 @@ code_change(_OldVsn, State, _Extra) ->
 
 do_list(Bucket, State = #state{connection = C}) ->
     {ok, Ms, C1} = ddb_tcp:list(Bucket, C),
-    Tree1 = gb_trees:enter(Bucket, {erlang:system_time(seconds), Ms}, State#state.metrics),
+    Tree1 = gb_trees:enter(Bucket, {erlang:system_time(seconds), Ms},
+                           State#state.metrics),
     {Ms, State#state{metrics = Tree1, connection = C1}}.

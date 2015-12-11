@@ -1,8 +1,69 @@
 -module(dql).
--export([prepare/1, parse/1, unparse/1, glob_match/2]).
+-export([prepare/1, parse/1, unparse/1, glob_match/2, flatten/1, unparse_metric/1]).
+
+
+-type bm() :: {binary(), [binary()]}.
+
+-type gbm() :: {binary(), [binary() | '*']}.
+
+-type time() :: {time, pos_integer(), ms | s | m | h | d | w} | pos_integer().
+
+-type resolution() :: time().
+
+-type relative_time() :: time() |
+                         now |
+                         {'after' | before, pos_integer(), time()} |
+                         {ago, time()}.
+
+
+-type range() :: {between, relative_time(), relative_time()} |
+                 {last, time()}.
+
+-type comb_fun() :: avg | min | max | sum.
+-type aggr_fun1() :: derivate.
+-type aggr_fun2() :: avg | sum | min | max.
+
+-type get_stmt() ::
+        {get, bm()} |
+        {sget, gbm()}.
+
+-type aggr_stmt() ::
+        {aggr, aggr_fun1(), statement()} |
+        {aggr, aggr_fun2(), statement(), time()}.
+
+-type cmb_stmt() ::
+        {combine, comb_fun(), [statement()]}.
+
+-type statement() ::
+        get_stmt() |
+        aggr_stmt() |
+        cmb_stmt().
+
+-type flat_aggr_fun() ::
+        {aggr, aggr_fun2(), time()} |
+        {aggr, aggr_fun1()}.
+
+-type flat_terminal() ::
+        {combine, comb_fun(), [flat_stmt()]}.
+
+-type flat_stmt() ::
+        flat_terminal() |
+        {calc, [flat_aggr_fun()], flat_terminal() | get_stmt()}.
+
+-type parser_error() ::
+        {error, binary()}.
+
+-type alias() :: term().
+
+-spec parse(string() | binary()) ->
+                   parser_error() |
+                   {ok, {select, [statement()], range(), resolution()}} |
+                   {ok, {select, [statement()], [alias()], range(), resolution()}}.
+
 
 parse(S) when is_binary(S)->
     parse(binary_to_list(S));
+
 parse(S) ->
     case dql_lexer:string(S) of
         {error,{Line, dql_lexer,E},1} ->
@@ -16,9 +77,43 @@ parse(S) ->
             end
     end.
 
+flatten({named, N, Child}) ->
+    {named, N, flatten(Child, [])};
+
+flatten(Child) ->
+    {named, unparse(Child), flatten(Child, [])}.
+
+-spec flatten(statement(), [flat_aggr_fun()]) ->
+                     flat_stmt().
+flatten({sget, _} = Get, Chain) ->
+    {calc, Chain, Get};
+
+flatten({get, _} = Get, Chain) ->
+    {calc, Chain, Get};
+
+flatten({combine, Aggr, Children}, []) ->
+    Children1 = [flatten(C, []) || C <- Children],
+    {combine, Aggr, Children1};
+
+flatten({combine, Aggr, Children}, Chain) ->
+    Children1 = [flatten(C, []) || C <- Children],
+    {calc, Chain, {combine, Aggr, Children1}};
+
+flatten({aggr, Aggr, Child}, Chain) ->
+    flatten(Child, [{aggr, Aggr} | Chain]);
+
+
+flatten({aggr, Aggr, Child, Time}, Chain) ->
+    flatten(Child, [{aggr, Aggr, Time} | Chain]).
+
+
 parser_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Parser error in line ~p: ~s",
                                          [Line, E]))}.
+
+lexer_error(Line, {illegal, E})  ->
+    {error, list_to_binary(io_lib:format("Lexer error in line ~p illegal: ~s",
+                                         [Line, E]))};
 
 lexer_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
@@ -48,8 +143,9 @@ prepare(Qs, Aliases, T, R) ->
                             {[Q1 | QAcc] , A1, M1}
                     end, {[], AliasesF, MetricsF}, Qs),
     QQ1 = lists:reverse(QQ),
+    QQ2 = [flatten(Q) || Q <- QQ1],
     {Start, Count} = compute_se(T1, Rms),
-    {QQ1, Start, Count, Rms, AliasesQ, MetricsQ}.
+    {QQ2, Start, Count, Rms, AliasesQ, MetricsQ}.
 
 compute_se({between, S, E}, _Rms) when E > S->
     {S, E - S};
@@ -58,9 +154,6 @@ compute_se({between, S, E}, _Rms) ->
 
 compute_se({last, N}, Rms) ->
     NowMs = erlang:system_time(milli_seconds),
-    %%UTC = calendar:now_to_universal_time(Now),
-    %%UTCs = calendar:datetime_to_gregorian_seconds(UTC) - 62167219200,
-    %%UTCms = (UTCs * 1000) + (NowMs rem 1000),
     RelativeNow = NowMs div Rms,
     {RelativeNow - N, N};
 
@@ -99,25 +192,25 @@ preprocess_qry({get, BM}, Aliases, Metrics, _Rms) ->
                end,
     {{get, BM}, Aliases, Metrics1};
 
-preprocess_qry({mget, AggrF, BM}, Aliases, Metrics, _Rms) ->
-    Metrics1 = case gb_trees:lookup({AggrF, BM}, Metrics) of
+preprocess_qry({sget, BM}, Aliases, Metrics, _Rms) ->
+    Metrics1 = case gb_trees:lookup(BM, Metrics) of
                    none ->
-                       gb_trees:insert({AggrF, BM}, {mget, 0}, Metrics);
-                   {value, {mget, N}} ->
-                       gb_trees:update({AggrF, BM}, {mget, N + 1}, Metrics)
+                       gb_trees:insert(BM, {sget, 0}, Metrics);
+                   {value, {sget, N}} ->
+                       gb_trees:update(BM, {sget, N + 1}, Metrics)
                end,
-    {{mget, AggrF, BM}, Aliases, Metrics1};
+    {{sget, BM}, Aliases, Metrics1};
 
 preprocess_qry({var, V}, Aliases, Metrics, _Rms) ->
     Metrics1 = case gb_trees:lookup(V, Aliases) of
                    none ->
                        Metrics;
-                   {value, {mget, AggrF, BM}} ->
-                       case gb_trees:lookup({AggrF, BM}, Metrics) of
+                   {value, {sget, BM}} ->
+                       case gb_trees:lookup(BM, Metrics) of
                            none ->
-                               gb_trees:insert({AggrF, BM}, {mget, 0}, Metrics);
-                           {value, {mget, N}} ->
-                               gb_trees:update({AggrF, BM}, {mget, N + 1}, Metrics)
+                               gb_trees:insert(BM, {sget, 0}, Metrics);
+                           {value, {sget, N}} ->
+                               gb_trees:update(BM, {sget, N + 1}, Metrics)
                        end;
                    {value, {get, BM}} ->
                        case gb_trees:lookup(BM, Metrics) of
@@ -177,13 +270,24 @@ unparse({alias, A, V}) ->
     <<(unparse(V))/binary, " AS '", A/binary, "'">>;
 unparse({get, {B, M}}) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
-unparse({mget, Fun, {B, M}}) ->
+unparse({sget, {B, M}}) ->
+    <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
+unparse({combine, Fun, L}) ->
     Funs = list_to_binary(atom_to_list(Fun)),
-    <<Funs/binary, "(", (unparse_metric(M))/binary, " BUCKET '", B/binary, "')">>;
+    <<Funs/binary, "(", (unparse(L))/binary, ")">>;
+
 unparse(N) when is_integer(N)->
     <<(integer_to_binary(N))/binary>>;
+
 unparse(F) when is_float(F)->
     <<(float_to_binary(F))/binary>>;
+
+unparse(now) ->
+    <<"NOW">>;
+
+unparse({ago, T}) ->
+    <<(unparse(T))/binary, " AGO">>;
+
 unparse({time, N, ms}) ->
     <<(integer_to_binary(N))/binary, " ms">>;
 unparse({time, N, s}) ->

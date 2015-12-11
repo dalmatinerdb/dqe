@@ -1,4 +1,4 @@
--module(dqe_mget).
+-module(dqe_sum).
 
 -behaviour(dflow).
 
@@ -12,7 +12,8 @@
 
 init([SubQs]) ->
     SubQs1 = [{make_ref(), SubQ} || SubQ <- SubQs],
-    {ok, #state{count = length(SubQs1)}, SubQs1}.
+    Count = length(SubQs1),
+    {ok, #state{count = Count}, SubQs1}.
 
 describe(_) ->
     "sum".
@@ -27,10 +28,10 @@ emit(Child, {Data, Resolution},
     Tree1 = add_to_tree(Term, Data, Tree),
     case shrink_tree(Tree1, Count, <<>>) of
         {Tree2, <<>>} ->
-            {ok, State#state{acc = Tree2, term_for_child = TFC}};
+            {ok, State#state{acc = Tree2, term_for_child = TFC1}};
         {Tree2, Data1} ->
             {emit, {Data1, Resolution},
-             State#state{acc = Tree2, term_for_child = TFC}}
+             State#state{acc = Tree2, term_for_child = TFC1}}
     end.
 
 done({last, _Child}, State) ->
