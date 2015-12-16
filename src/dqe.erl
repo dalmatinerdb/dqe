@@ -137,7 +137,6 @@ prepare(Query) ->
                  end
                  || {Bkt, Ps} <- Buckets1],
             Parts1 = expand_parts(Parts, Buckets2),
-            io:format("~p~n", [Parts1]),
             case name_parts(Parts1, [], Aliases, Buckets2) of
                 {ok, Parts2} ->
                     {ok, {Parts2, Start, Count}};
