@@ -161,6 +161,10 @@ expand_part({combine, Fun, Parts}, Buckets) ->
 expand_part({calc, C, {get, {B, M}}}, _Buckets) ->
     %% We convert the metric from a list to a propper metric here
     [{keep, keep, {calc, C, {get, {B, dproto:metric_from_list(M)}}}}];
+expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
+    %% We convert the metric from a list to a propper metric here
+    [{keep, keep, Comb1}] = expand_part(Comb, Buckets),
+    [{keep, keep, {calc, C, Comb1}}];
 expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     Ms = orddict:fetch(B, Buckets),
     {ok, Selected} = glob_match(G, Ms),
@@ -420,11 +424,15 @@ rmatch([], <<>>) ->
 rmatch(_, _) ->
     false.
 
+
 needs_buckets(L,  Buckets) when is_list(L) ->
     lists:foldl(fun needs_buckets/2, Buckets, L);
 
 needs_buckets({combine, _Func, Steps}, Buckets) ->
     lists:foldl(fun needs_buckets/2, Buckets, Steps);
+
+needs_buckets({calc, _Steps, {combine, _Func, _CSteps} = Comb}, Buckets) ->
+    needs_buckets(Comb, Buckets);
 
 needs_buckets({calc, _Steps, {sget, {Bucket, Glob}}}, Buckets) ->
     orddict:append(Bucket, glob_prefix(Glob, []), Buckets);
