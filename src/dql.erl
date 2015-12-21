@@ -99,6 +99,9 @@ flatten({combine, Aggr, Children}, Chain) ->
     Children1 = [flatten(C, []) || C <- Children],
     {calc, Chain, {combine, Aggr, Children1}};
 
+flatten({math, Fun, Child, Val}, Chain) ->
+    flatten(Child, [{math, Fun, Val} | Chain]);
+
 flatten({aggr, Aggr, Child}, Chain) ->
     flatten(Child, [{aggr, Aggr} | Chain]);
 
