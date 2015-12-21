@@ -31,24 +31,24 @@
 
 get(Bucket, Metric, Time, Count) ->
     Worker = worker({get, Bucket, Metric, Time, Count}),
-    poolboy:transaction(backend_connection, Worker, ?TIMEOUT).
+    transact(backend_connection, Worker, ?TIMEOUT).
 
 list(Bucket) ->
-    poolboy:transaction(backend_connection,
-                        fun(Worker) ->
-                                gen_server:call(Worker, {list, Bucket}, ?TIMEOUT)
-                        end, ?TIMEOUT).
+    transact(backend_connection,
+             fun(Worker) ->
+                     gen_server:call(Worker, {list, Bucket}, ?TIMEOUT)
+             end, ?TIMEOUT).
 list(Bucket, Prefix) ->
-    poolboy:transaction(backend_connection,
-                        fun(Worker) ->
-                                gen_server:call(Worker, {list, Bucket, Prefix}, ?TIMEOUT)
-                        end, ?TIMEOUT).
+    transact(backend_connection,
+             fun(Worker) ->
+                     gen_server:call(Worker, {list, Bucket, Prefix}, ?TIMEOUT)
+             end, ?TIMEOUT).
 
 list() ->
-    poolboy:transaction(backend_connection,
-                        fun(Worker) ->
-                                gen_server:call(Worker, list, ?TIMEOUT)
-                        end, ?TIMEOUT).
+    transact(backend_connection,
+             fun(Worker) ->
+                     gen_server:call(Worker, list, ?TIMEOUT)
+             end, ?TIMEOUT).
 
 worker(Call) ->
     fun(Worker) ->
@@ -80,7 +80,7 @@ start_link(Args) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Host, Port]) ->
-	{ok, MaxRead} = application:get_env(dqe, max_read),
+    {ok, MaxRead} = application:get_env(dqe, max_read),
     {ok, #state{max_read=MaxRead, host = Host, port = Port}, 0}.
 
 %%--------------------------------------------------------------------
@@ -99,7 +99,7 @@ init([Host, Port]) ->
 %%--------------------------------------------------------------------
 handle_call({get, _, _, _, Count}, _From, State = #state{max_read = MaxRead})
   when Count > MaxRead ->
-	{reply, {error, too_big}, State};
+    {reply, {error, too_big}, State};
 
 handle_call({get, Bucket, Metric, Time, Count}, _From,
             State = #state{connection = C}) ->
@@ -213,3 +213,17 @@ do_list(Bucket, State = #state{connection = C}) ->
     Tree1 = gb_trees:enter(Bucket, {erlang:system_time(seconds), Ms},
                            State#state.metrics),
     {Ms, State#state{metrics = Tree1, connection = C1}}.
+
+
+%% This is needed for riak_core applications, they depends on a
+%% poolboy old as shit that does not support transaction/3.
+%%
+%% The following code is exactly how transaction/3 works on newer
+%% poolboy versions
+transact(Pool, Fun, Timeout) ->
+    Worker = poolboy:checkout(Pool, true, Timeout),
+    try
+        Fun(Worker)
+    after
+        ok = poolboy:checkin(Pool, Worker)
+    end.
