@@ -67,7 +67,7 @@ percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 {DATE}      :   S = strip(TokenChars,   TokenLen),
                 {token, {date,          TokenLine, S}}.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
-[(),.*]     :   {token, {a(TokenChars), TokenLine}}.
+[(),.*/]    :   {token, {a(TokenChars), TokenLine}}.
 {WS}+       :   skip_token.
 
 Erlang code.
