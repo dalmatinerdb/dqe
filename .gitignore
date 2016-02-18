@@ -4,4 +4,7 @@ src/dql_parser.erl
 ebin
 .eunit
 deps
+TEST*
 _build
+.eqc*
+current_counterexample.eqc
