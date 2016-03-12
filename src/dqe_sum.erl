@@ -21,7 +21,7 @@ describe(_) ->
 start({_Start, _Count}, State) ->
     {ok, State}.
 
-emit(Child, {Data, Resolution},
+emit(Child, {realized, {Data, Resolution}},
      State = #state{term_for_child = TFC, count = Count, acc = Tree}) ->
     TFC1 = dict:update_counter(Child, 1, TFC),
     Term = dict:fetch(Child, TFC1),
@@ -30,7 +30,7 @@ emit(Child, {Data, Resolution},
         {Tree2, <<>>} ->
             {ok, State#state{acc = Tree2, term_for_child = TFC1}};
         {Tree2, Data1} ->
-            {emit, {Data1, Resolution},
+            {emit, {realized, {Data1, Resolution}},
              State#state{acc = Tree2, term_for_child = TFC1}}
     end.
 

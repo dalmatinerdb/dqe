@@ -17,8 +17,8 @@ describe(#state{name = Name}) ->
 start({_Start, _Count}, State) ->
     {ok, State}.
 
-emit(_C, {Data, Resolution}, State = #state{name = Name}) ->
-    {emit, {Name, Data, Resolution}, State}.
+emit(_C, {realized, {Data, Resolution}}, State = #state{name = Name}) ->
+    {emit, {realized, {Name, Data, Resolution}}, State}.
 
 done(_Child, State) ->
     {done, State}.

@@ -14,9 +14,14 @@ DATE    = "([^"]|\.)+"
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
 WS      = ([\000-\s]|%.*)
-AGGR    = (min|max|empty)
-CAGGR   = (avg|sum)
+MM      = (min|max)
+AVG     = (avg)
+HFUN    = (mean|median|stddev)
+AGGR    = (empty)
+CAGGR   = (sum)
 MATH    = (divide|multiply)
+HIST    = (histogram)
+PERC    = (percentile)
 TIME    = (ms|s|m|h|d|w)
 SELECT  = [Ss][Ee][Ll][Ee][Cc][Tt]
 BUCKET  = [Bb][Uu][Cc][Kk][Ee][Tt]
@@ -52,12 +57,15 @@ Rules.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
 
 derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
-percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 {AGGR}      :   {token, {aggr,          TokenLine, a(TokenChars)}}.
+{MM}        :   {token, {mm,            TokenLine, a(TokenChars)}}.
+{AVG}       :   {token, {avg,           TokenLine, a(TokenChars)}}.
+{HFUN}      :   {token, {hfun,          TokenLine, a(TokenChars)}}.
 {MATH}      :   {token, {math,          TokenLine, a(TokenChars)}}.
 {CAGGR}     :   {token, {caggr,         TokenLine, a(TokenChars)}}.
 {TIME}      :   {token, {time,          TokenLine, a(TokenChars)}}.
-
+{HIST}      :   {token, {histogram,     TokenLine, a(TokenChars)}}.
+{PERC}      :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 
 {Sign}{Digit}+ : {token, {integer,       TokenLine, i(TokenChars)}}.
 {Sign}{Float}  : {token, {float,         TokenLine, f(TokenChars)}}.

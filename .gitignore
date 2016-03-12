@@ -8,3 +8,4 @@ TEST*
 _build
 .eqc*
 current_counterexample.eqc
+rebar3.crashdump

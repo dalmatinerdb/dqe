@@ -2,12 +2,12 @@
 Nonterminals
 funs fun selector select timeframe aliases alias resolution int_or_time mb fune
 var pit metric glob_metric part_or_name calculatable bucket gmb calculatables
-infix.
+infix hist.
 
 Terminals '(' ')' ',' '.' '*' '/'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
-kw_between kw_and kw_ago kw_now derivate time math percentile float name
-kw_after kw_before kw_for.
+kw_between kw_and kw_ago kw_now derivate time math float name
+kw_after kw_before kw_for histogram percentile avg hfun mm.
 
 
 %%%===================================================================
@@ -47,13 +47,27 @@ calculatable -> infix : '$1'.
 calculatables -> calculatable : ['$1'].
 calculatables -> calculatable ',' calculatables : ['$1'] ++ '$3'.
 
+%%      1         2   3       4   5       6   7       8   9           10
+hist -> histogram '(' integer ',' integer ',' calculatable ',' int_or_time ')'
+            : {histogram, unwrap('$3'), unwrap('$5'), '$7', '$9'}.
+
+%% Histogram related functions
+
+
+%% Histogram based aggregation functiosn
+fun -> mm         '(' hist          ')' : {hfun, unwrap('$1'), '$3'}.
+fun -> hfun       '(' hist          ')' : {hfun, unwrap('$1'), '$3'}.
+fun -> avg        '(' hist          ')' : {hfun, avg, '$3'}.
+fun -> percentile '(' hist          ',' float ')' : {hfun, percentile, '$3', unwrap('$5')}.
 %% A aggregation function
-fun -> derivate '(' calculatable ')' : {aggr, derivate, '$3'}.
-fun -> percentile '(' calculatable ',' float ',' int_or_time ')' : {aggr, percentile, '$3', unwrap('$5'), '$7'}.
-fun -> aggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> caggr '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
-fun -> caggr '(' calculatable ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> math '(' calculatable ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
+fun -> derivate   '(' calculatable  ')' : {aggr, derivate, '$3'}.
+fun -> mm         '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> aggr       '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> avg        '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
+fun -> avg        '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> caggr      '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
+fun -> caggr      '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
+fun -> math       '(' calculatable  ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
 
 infix -> calculatable '/' integer : {math, divide, '$1', unwrap('$3')}.
 infix -> calculatable '*' integer : {math, multiply, '$1', unwrap('$3')}.

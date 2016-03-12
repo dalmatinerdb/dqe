@@ -99,6 +99,18 @@ flatten({combine, Aggr, Children}, Chain) ->
     Children1 = [flatten(C, []) || C <- Children],
     {calc, Chain, {combine, Aggr, Children1}};
 
+
+flatten({hfun, Fun, Child, Val}, Chain) ->
+    flatten(Child, [{hfun, Fun, Val} | Chain]);
+
+flatten({hfun, Fun, Child}, Chain) ->
+    flatten(Child, [{hfun, Fun} | Chain]);
+
+flatten({histogram, HighestTrackableValue,
+         SignificantFigures, Child, Time}, Chain) ->
+    flatten(Child, [{histogram, HighestTrackableValue,
+                     SignificantFigures, Time} | Chain]);
+
 flatten({math, Fun, Child, Val}, Chain) ->
     flatten(Child, [{math, Fun, Val} | Chain]);
 
@@ -185,6 +197,23 @@ preprocess_qry({math, MathF, Q, V}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
     {{math, MathF, Q1, V}, A1, M1};
 
+preprocess_qry({hfun, HFun, Q}, Aliases, Metrics, Rms) ->
+    {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
+    {{hfun, HFun, Q1}, A1, M1};
+
+preprocess_qry({hfun, HFun, Q, V}, Aliases, Metrics, Rms) ->
+    {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
+    {{hfun, HFun, Q1, V}, A1, M1};
+
+preprocess_qry({histogram, HighestTrackableValue, SignificantFigures,
+                Q, Time}, Aliases, Metrics, Rms)
+  when is_integer(HighestTrackableValue),
+       SignificantFigures >= 1,
+       SignificantFigures =< 5 ->
+    {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
+    {{histogram, HighestTrackableValue, SignificantFigures,
+      Q1, Time}, A1, M1};
+
 
 preprocess_qry({get, BM}, Aliases, Metrics, _Rms) ->
     Metrics1 = case gb_trees:lookup(BM, Metrics) of
@@ -269,6 +298,7 @@ unparse({before, A, B}) ->
 unparse({var, V}) ->
     V;
 
+
 unparse({alias, A, V}) ->
     <<(unparse(V))/binary, " AS '", A/binary, "'">>;
 unparse({get, {B, M}}) ->
@@ -303,6 +333,23 @@ unparse({time, N, d}) ->
     <<(integer_to_binary(N))/binary, " d">>;
 unparse({time, N, w}) ->
     <<(integer_to_binary(N))/binary, " w">>;
+
+unparse({histogram, HighestTrackableValue, SignificantFigures, Q, T}) ->
+    <<"histogram(",
+      (integer_to_binary(HighestTrackableValue))/binary, ", ",
+      (integer_to_binary(SignificantFigures))/binary, ", ",
+      (unparse(Q))/binary, ", ",
+      (unparse(T))/binary, ")">>;
+unparse({hfun, Fun, Q}) ->
+    Funs = list_to_binary(atom_to_list(Fun)),
+    Qs = unparse(Q),
+    <<Funs/binary, "(", Qs/binary, ")">>;
+
+unparse({hfun, percentile, Q, P}) ->
+    Qs = unparse(Q),
+    Ps = unparse(P),
+    <<"percentile(", Qs/binary, ", ", Ps/binary, ")">>;
+
 unparse({aggr, Fun, Q}) ->
     Funs = list_to_binary(atom_to_list(Fun)),
     Qs = unparse(Q),

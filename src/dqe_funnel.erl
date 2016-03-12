@@ -27,8 +27,8 @@ done({last, _}, State = #state{buffer = []}) ->
 
 done({last, _}, State = #state{buffer = B, refs = Rs}) ->
     Data = [case orddict:find(R, B) of
-             error -> [];
-              {ok, V} -> V
+                error -> [];
+                {ok, V} -> V
             end || R <- Rs],
     {done, Data, State};
 
