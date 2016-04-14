@@ -32,6 +32,7 @@ AND     = [Aa][Nn][Dd]
 AFTER   = [Aa][Ff][Tt][Ee][Rr]
 BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
 FOR     = [Ff][Oo][Rr]
+WHERE   = [Ww][Hh][Ee][Rr][Ee]
 
 
 
@@ -50,6 +51,7 @@ Rules.
 {AFTER}     :   {token, {kw_after,      TokenLine}}.
 {BEFORE}    :   {token, {kw_before,     TokenLine}}.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
+{WHERE}     :   {token, {kw_where,      TokenLine}}.
 
 derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
 percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
@@ -67,7 +69,7 @@ percentile  :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 {DATE}      :   S = strip(TokenChars,   TokenLen),
                 {token, {date,          TokenLine, S}}.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
-[(),.*/]    :   {token, {a(TokenChars), TokenLine}}.
+[(),.*/=]   :   {token, {a(TokenChars), TokenLine}}.
 {WS}+       :   skip_token.
 
 Erlang code.

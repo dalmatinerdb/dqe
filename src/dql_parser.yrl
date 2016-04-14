@@ -2,12 +2,12 @@
 Nonterminals
 funs fun selector select timeframe aliases alias resolution int_or_time mb fune
 var pit metric glob_metric part_or_name calculatable bucket gmb calculatables
-infix.
+infix mfrom where.
 
-Terminals '(' ')' ',' '.' '*' '/'
+Terminals '(' ')' ',' '.' '*' '/' '='
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
 kw_between kw_and kw_ago kw_now derivate time math percentile float name
-kw_after kw_before kw_for.
+kw_after kw_before kw_for kw_where.
 
 
 %%%===================================================================
@@ -65,11 +65,17 @@ var -> part_or_name : {var, '$1'}.
 %% A selector, either a combination of <metric> BUCKET <bucket> or a mget aggregate.
 selector -> mb : {get, '$1'}.
 selector -> gmb : {sget, '$1'}.
+selector -> mfrom : {lookup, '$1'}.
 
 %% A bucket and metric combination used as a solution
 mb -> metric kw_bucket part_or_name : {'$3', '$1'}.
 
 gmb -> glob_metric kw_bucket bucket : {'$3', '$1'}.
+
+mfrom -> metric kw_in bucket : {'$3', '$1'}.
+mfrom -> metric kw_in bucket kw_where where : {'$3', '$1', '$5'}.
+
+where -> part_or_name '=' part_or_name : {'$1', '$3'}.
 
 %%%===================================================================
 %%% From section, aliased selectors

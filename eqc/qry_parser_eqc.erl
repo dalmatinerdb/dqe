@@ -76,7 +76,8 @@ aggr_tree(Size) ->
 qry_tree(0) ->
     oneof([
            {get, bm()},
-           {sget, glob_bm()}
+           {sget, glob_bm()},
+           {lookup, lookup()}
           ]);
 
 qry_tree(Size) ->
@@ -101,6 +102,14 @@ glob_bm() ->
 
 bm() ->
     {bucket(), metric()}.
+
+lookup() ->
+    oneof([
+           bm(),
+           {bucket(), metric(), where_clause()}]).
+
+where_clause() ->
+    {non_empty_binary(), non_empty_binary()}.
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),

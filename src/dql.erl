@@ -246,6 +246,9 @@ unparse_metric([Metric | R], Acc) ->
 unparse_metric([], Acc) ->
     Acc.
 
+unparse_where({K, V}) ->
+    <<"'", K/binary, "' = '", V/binary, "'">>.
+
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],
     Unparsed = combine(Ps, <<>>),
@@ -275,6 +278,11 @@ unparse({get, {B, M}}) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
 unparse({sget, {B, M}}) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
+unparse({lookup, {B, M}}) ->
+    <<(unparse_metric(M))/binary, " IN '", B/binary, "'">>;
+unparse({lookup, {B, M, Where}}) ->
+    <<(unparse_metric(M))/binary, " IN '", B/binary,
+      "' WHERE ", (unparse_where(Where))/binary>>;
 unparse({combine, Fun, L}) ->
     Funs = list_to_binary(atom_to_list(Fun)),
     <<Funs/binary, "(", (unparse(L))/binary, ")">>;
