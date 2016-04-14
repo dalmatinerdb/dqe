@@ -17,6 +17,7 @@ non_empty_binary() ->
 pos_int() ->
     ?SUCHTHAT(N, int(), N > 0).
 
+
 time_unit() ->
     oneof([ms, s, m, h, d, w]).
 
@@ -33,8 +34,11 @@ rel_time() ->
     oneof([
            pos_int(),
            now,
-           {ago, pos_int()}
+           {ago, time_type()}
           ]).
+
+hfun() ->
+    oneof([min, max, avg, mean, median, stddev]).
 
 
 qry_tree() ->
@@ -67,13 +71,25 @@ aggr_tree(Size) ->
          [
           {combine, comb_fun(), [Q]},
           {aggr, derivate, Q},
-          {aggr, percentile, Q, percentile(), aggr_range()},
           {aggr, aggr_fun(), Q, aggr_range()},
           {math, multiply, Q, pos_int()},
           {math, divide, Q, pos_int()}
          ])).
 
-qry_tree(0) ->
+significant_figures() ->
+    choose(1,5).
+
+hist_tree(Size) ->
+    ?LETSHRINK(
+       [Q], [qry_tree(Size - 1)],
+       ?LET(H, {histogram, pos_int(), significant_figures(), Q, aggr_range()},
+
+            oneof([
+                   {hfun, hfun(), H},
+                   {hfun, percentile, H, percentile()}
+                   ]))).
+
+qry_tree(S) when S < 1->
     oneof([
            {get, bm()},
            {sget, glob_bm()},
@@ -83,6 +99,7 @@ qry_tree(0) ->
 qry_tree(Size) ->
     ?LAZY(frequency(
             [{1, comb_tree(Size)},
+             {1, hist_tree(Size)},
              {10, aggr_tree(Size)}]
            )).
 
@@ -164,8 +181,61 @@ prop_qery_parse_unparse() ->
                 end
             end).
 
+prop_prepare() ->
+    ?FORALL(T, qry_tree(),
+            begin
+                Unparsed = ?P:unparse(T),
+                case ?P:prepare(Unparsed) of
+                    {ok, _} ->
+                        true;
+                    {error, E} ->
+                        io:format(user, "   ~p~n-> ~p~n-> ~p~n",
+                                  [T, Unparsed, E]),
+                        false
+                end
+            end).
+
+prop_dflow_prepare() ->
+    ?SETUP(fun mock/0,
+           ?FORALL(T, qry_tree(),
+                   begin
+                       Unparsed = ?P:unparse(T),
+                       case dqe:prepare(Unparsed) of
+                           {ok, _} ->
+                               true;
+                           {error, E} ->
+                               io:format(user, "   ~p~n-> ~p~n-> ~p~n",
+                                         [T, Unparsed, E]),
+                               false
+                       end
+                   end)).
+
 prop_glob_match() ->
     ?FORALL({S, G, M}, glob(),
             begin
                 M ==  ([S] == ?P:glob_match(G, [S]))
             end).
+
+mock() ->
+    meck:new(dqe, [passthrough]),
+    meck:expect(dqe, glob_match,
+                fun(_Glob, Metrics) ->
+                        {ok, Metrics}
+                end),
+    meck:new(dalmatiner_connection),
+    meck:expect(dalmatiner_connection, list,
+                fun (_) ->
+                        {ok, [dproto:metric_from_list([<<"a">>])]}
+                end),
+    meck:expect(dalmatiner_connection, list,
+                fun (_, Prefix) ->
+                        P1 = dproto:metric_to_list(Prefix),
+                        {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
+                end),
+
+    fun unmock/0.
+
+unmock() ->
+    meck:unload(dalmatiner_connection),
+    meck:unload(dqe),
+    ok.

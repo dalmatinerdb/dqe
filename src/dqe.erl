@@ -12,7 +12,10 @@
 
 -include_lib("dproto/include/dproto.hrl").
 
--export([prepare/1, run/1, run/2, error_string/1]).
+-export([prepare/1, run/1, run/2, error_string/1,
+         %% Exports for meck
+         glob_match/2]).
+
 
 -type query_reply() :: [{Name :: binary(),
                          Data :: binary(),
@@ -165,11 +168,11 @@ expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
     %% We convert the metric from a list to a propper metric here
     [{keep, keep, Comb1}] = expand_part(Comb, Buckets),
     [{keep, keep, {calc, C, Comb1}}];
+
 expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     Ms = orddict:fetch(B, Buckets),
-    {ok, Selected} = glob_match(G, Ms),
+    {ok, Selected} = dqe:glob_match(G, Ms),
     [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected].
-
 
 
 update_name(Name, keep, keep) ->
@@ -231,7 +234,9 @@ translate({calc, [], {get, {Bucket, Metric}}}, _Aliases, _Buckets) ->
 
 %% TODO we can do this better!
 translate({calc, Aggrs, G}, Aliases, Buckets) ->
-    FoldFn = fun({Type, Fun}, Acc) ->
+    FoldFn = fun({histogram, HTV, SF, T}, Acc) ->
+                     {histogram, HTV, SF, Acc, T};
+                 ({Type, Fun}, Acc) ->
                      {Type, Fun, Acc};
                  ({Type, Fun, Arg1}, Acc) ->
                      {Type, Fun, Acc, Arg1};
@@ -266,6 +271,41 @@ translate({aggr, derivate, SubQ}, Aliases, Buckets) ->
     end;
 
 
+%%--------------------------------------------------------------------
+%% Historam
+%%--------------------------------------------------------------------
+
+translate({hfun, Fun, SubQ}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_hfun1, [Fun, SubQ1]}};
+        E ->
+            E
+    end;
+
+translate({hfun, Fun, SubQ, Val}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_hfun2, [Fun, Val, SubQ1]}};
+        E ->
+            E
+    end;
+
+translate({histogram, HighestTrackableValue,
+           SignificantFigures, SubQ, Time}, Aliases, Buckets)
+  when SignificantFigures >= 1, SignificantFigures =< 5->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok,
+             {dqe_hist, [HighestTrackableValue, SignificantFigures, SubQ1, Time]}};
+        E ->
+            E
+    end;
+
+translate({histogram, _HighestTrackableValue,
+           _SignificantFigures, _SubQ, _Time}= E, _Aliases, _Buckets) ->
+    io:format(user, "sig: ~p~n", [E]),
+    {error, significant_figures};
 
 %%--------------------------------------------------------------------
 %% Math

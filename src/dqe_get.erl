@@ -32,10 +32,10 @@ start({Start, Count},
             {done, State};
         {ok, Res, <<>>} ->
             dflow:start(self(), {Start + Chunk, Count - Chunk}),
-            {emit, {mmath_bin:empty(Chunk), Res}, State};
+            {emit, {realized, {mmath_bin:empty(Chunk), Res}}, State};
         {ok, Res, Data} ->
             dflow:start(self(), {Start + Chunk, Count - Chunk}),
-            {emit, {mmath_bin:realize(Data), Res}, State}
+            {emit, {realized, {mmath_bin:realize(Data), Res}}, State}
     end;
 
 start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
@@ -43,9 +43,9 @@ start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
         {error, _Error} ->
             {done, State};
         {ok, Res, <<>>} ->
-            {done, {mmath_bin:empty(Count), Res}, State};
+            {done, {realized, {mmath_bin:empty(Count), Res}}, State};
         {ok, Res, Data} ->
-            {done, {mmath_bin:realize(Data), Res}, State}
+            {done, {realized, {mmath_bin:realize(Data), Res}}, State}
     end.
 
 emit(_Child, _Data, State) ->

@@ -24,19 +24,20 @@ describe(#state{aggr = Aggr, time = Time}) ->
 
 %% When we get the first data we can calculate both the applied
 %% time and the upwards resolution.
-emit(Child, {Data, Resolution},
+emit(Child, {realized, {Data, Resolution}},
      State = #state{resolution = undefined, time = Time}) ->
     Time1 = dqe_time:apply_times(Time, Resolution),
     emit(Child, {Data, Resolution},
          State#state{resolution = Time1 * Resolution, time = Time1});
 
-emit(_Child, {Data, _R},
+emit(_Child, {realized, {Data, _R}},
      State = #state{aggr = Aggr, time = Time, acc = Acc}) ->
     case execute(Aggr, <<Data/binary, Acc/binary>>, Time, <<>>) of
         {Acc1, <<>>} ->
             {ok, State#state{acc = Acc1}};
         {Acc2, AccEmit} ->
-            {emit, {AccEmit, State#state.resolution}, State#state{acc = Acc2}}
+            {emit, {realized, {AccEmit, State#state.resolution}},
+             State#state{acc = Acc2}}
     end.
 
 
@@ -45,7 +46,7 @@ done(_Child, State = #state{acc = <<>>}) ->
 
 done(_Child, State = #state{aggr = Aggr, time = Time, acc = Acc}) ->
     Data = mmath_aggr:Aggr(Acc, Time),
-    {done, {Data, State#state.resolution}, State#state{acc = <<>>}}.
+    {done, {realized, {Data, State#state.resolution}}, State#state{acc = <<>>}}.
 
 
 execute(Aggr, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * 9 ->

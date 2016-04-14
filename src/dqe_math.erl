@@ -19,8 +19,8 @@ describe(#state{op = Op, arg = Arg}) when is_integer(Arg) ->
 start({_Start, _Count}, State) ->
     {ok, State}.
 
-emit(_Child, {Data, Resolution}, State = #state{op = Op, arg = Arg}) ->
-    {emit, {mmath_aggr:Op(Data, Arg), Resolution}, State}.
+emit(_Child, {realized, {Data, Resolution}}, State = #state{op = Op, arg = Arg}) ->
+    {emit, {realized, {mmath_aggr:Op(Data, Arg), Resolution}}, State}.
 
 done({last, _Child}, Aggr) ->
     {done, Aggr}.
