@@ -172,8 +172,12 @@ expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
 expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     Ms = orddict:fetch(B, Buckets),
     {ok, Selected} = dqe:glob_match(G, Ms),
-    [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected].
+    [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected];
 
+expand_part({calc, C, {lookup, Query}}, _Buckets) ->
+    {ok, Selected} = dqe_lookup:lookup(Query),
+    %% TODO fix naming
+    [{keep, keep, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
 
 update_name(Name, keep, keep) ->
     Name;
@@ -480,6 +484,9 @@ needs_buckets({calc, _Steps, {sget, {Bucket, Glob}}}, Buckets) ->
 needs_buckets({calc, _Steps, {get, _}}, Buckets) ->
     Buckets;
 
+needs_buckets({calc, _Steps, {lookup, _}}, Buckets) ->
+    Buckets;
+
 needs_buckets({aggr, _Aggr, SubQ}, Buckets) ->
     needs_buckets(SubQ, Buckets);
 
@@ -499,4 +506,7 @@ needs_buckets({var, _}, Buckets) ->
     Buckets;
 
 needs_buckets({get, _}, Buckets) ->
+    Buckets;
+
+needs_buckets({lookup, _}, Buckets) ->
     Buckets.

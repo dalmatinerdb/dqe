@@ -1,5 +1,6 @@
 -module(dql).
--export([prepare/1, parse/1, unparse/1, glob_match/2, flatten/1, unparse_metric/1]).
+-export([prepare/1, parse/1, unparse/1, glob_match/2, flatten/1, unparse_metric/1,
+         unparse_where/1]).
 
 
 -type bm() :: {binary(), [binary()]}.
@@ -90,6 +91,9 @@ flatten({sget, _} = Get, Chain) ->
 
 flatten({get, _} = Get, Chain) ->
     {calc, Chain, Get};
+
+flatten({lookup, _} = Lookup, Chain) ->
+    {calc, Chain, Lookup};
 
 flatten({combine, Aggr, Children}, []) ->
     Children1 = [flatten(C, []) || C <- Children],
