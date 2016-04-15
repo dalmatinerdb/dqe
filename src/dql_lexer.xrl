@@ -34,6 +34,7 @@ IN      = [Ii][Nn]
 NOW     = [Nn][Oo][Ww]
 AGO     = [Aa][Gg][Oo]
 AND     = [Aa][Nn][Dd]
+OR      = [Oo][Rr]
 AFTER   = [Aa][Ff][Tt][Ee][Rr]
 BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
 FOR     = [Ff][Oo][Rr]
@@ -53,6 +54,7 @@ Rules.
 {NOW}       :   {token, {kw_now,        TokenLine}}.
 {AGO}       :   {token, {kw_ago,        TokenLine}}.
 {AND}       :   {token, {kw_and,        TokenLine}}.
+{OR}        :   {token, {kw_or,         TokenLine}}.
 {AFTER}     :   {token, {kw_after,      TokenLine}}.
 {BEFORE}    :   {token, {kw_before,     TokenLine}}.
 {FOR}       :   {token, {kw_for,        TokenLine}}.

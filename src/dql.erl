@@ -280,7 +280,15 @@ unparse_metric([], Acc) ->
     Acc.
 
 unparse_where({K, V}) ->
-    <<"'", K/binary, "' = '", V/binary, "'">>.
+    <<"'", K/binary, "' = '", V/binary, "'">>;
+unparse_where({Operator, Clause1, Clause2}) ->
+    P1 = unparse_where(Clause1),
+    P2 = unparse_where(Clause2),
+    Op = case Operator of
+             'and' -> <<" AND ">>;
+             'or' -> <<" OR ">>
+         end,
+    <<P1/binary, Op/binary, "(", P2/binary,")">>.
 
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],

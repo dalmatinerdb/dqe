@@ -121,12 +121,21 @@ bm() ->
     {bucket(), metric()}.
 
 lookup() ->
-    oneof([
-           bm(),
-           {bucket(), metric(), where_clause()}]).
+    ?SIZED(S, lookup(S)).
 
-where_clause() ->
-    {non_empty_binary(), non_empty_binary()}.
+lookup(0) ->
+    bm();
+lookup(S) ->
+    {bucket(), metric(), where_clause(S)}.
+
+where_clause(S) when S =< 1 ->
+    {non_empty_binary(), non_empty_binary()};
+where_clause(S) ->
+    ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
+
+where_clause_choice(N, S) ->
+    oneof([{'and', where_clause(N), where_clause(S - N)},
+           {'or', where_clause(N), where_clause(S - N)}]).
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),
