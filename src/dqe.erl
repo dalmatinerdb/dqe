@@ -94,7 +94,8 @@ run(Query, Timeout) ->
                 {ok, [{error, no_results}]} ->
                     {error, no_results};
                 {ok, [Result]} ->
-                    {ok, Start, Result};
+                    Result1 = [Element || {points, Element} <- Result],
+                    {ok, Start, Result1};
                 {ok, []} ->
                     {error, no_results};
                 E ->
