@@ -65,4 +65,3 @@ mk_hist(HVT, SF, Data) ->
     {ok, H} = hdr_histogram:open(HVT, SF),
     [ hdr_histogram:record(H, V)|| V <- mmath_bin:to_list(mmath_bin:derealize(Data))],
     H.
-
