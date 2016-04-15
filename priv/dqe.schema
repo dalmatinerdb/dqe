@@ -1,20 +1,5 @@
 %% -*- erlang -*-
 
-%% @doc The TCP endpoint for the backend server.
-{mapping, "backend_server", "dqe.backend",
- [{default, {"127.0.0.1", 5555}},
-  {datatype, ip}]}.
-
-%% @doc Initial number of conneciton pool workers
-{mapping, "pool.size", "dqe.pool_size",
- [{default, 20},
-  {datatype, integer}]}.
-
-%% @doc Maximum number of conneciton pool workers
-{mapping, "pool.max", "dqe.pool_max",
- [{default, 50},
-  {datatype, integer}]}.
-
 %% @doc The chunk size used to read from the backend.
 {mapping, "chunk", "dqe.get_chunk",
  [{default, 100000},
