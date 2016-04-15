@@ -3,7 +3,7 @@
               {vsn,"0.1.33"},
               {registered,[]},
               {applications,[kernel,ddb_client,poolboy,qdate,dflow,mmath,
-                             dproto,stdlib, hdr_histogram]},
+                             dproto,stdlib,hdr_histogram,dqe_idx,dqe_idx_ddb]},
               {mod,{dqe_app,[]}},
               {env,[]},
               {maintainers,["Heinz N. Gies"]},
