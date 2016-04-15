@@ -126,22 +126,12 @@ prepare(Query) ->
     case dql:prepare(Query) of
         {ok, {Parts, Start, Count, _Res, Aliases, _SomethingElse}} ->
             Buckets = needs_buckets(Parts, []),
-            Buckets1 = [{B, compress_prefixes(Ps)} || {B, Ps} <- Buckets],
-            Buckets2 =
-                [case Ps of
-                     all ->
-                         {Bkt, ddb_connection:list(Bkt)};
-                     _ ->
-                         Ps1 = [begin
-                                    {ok, Ms} = ddb_connection:list(Bkt, P),
-                                    Ms
-                                end || P <- Ps],
-                         Ps2 = lists:usort(lists:flatten(Ps1)),
-                         {Bkt, Ps2}
-                 end
-                 || {Bkt, Ps} <- Buckets1],
-            Parts1 = expand_parts(Parts, Buckets2),
-            case name_parts(Parts1, [], Aliases, Buckets2) of
+            Buckets1 = [begin
+                            {ok, BMs} = dqe_idx:expand(B, Gs),
+                            BMs
+                        end || {B, Gs} <- Buckets],
+            Parts1 = expand_parts(Parts, Buckets1),
+            case name_parts(Parts1, [], Aliases, Buckets1) of
                 {ok, Parts2} ->
                     {ok, {Parts2, Start, Count}};
                 E ->
@@ -201,22 +191,6 @@ name_parts([], Acc, _Aliases, _Buckets) ->
     {ok, lists:reverse(Acc)}.
 
 
-compress_prefixes(Prefixes) ->
-    compress_prefixes(lists:sort(Prefixes), []).
-
-compress_prefixes([[] | _], _) ->
-    all;
-compress_prefixes([], R) ->
-    R;
-compress_prefixes([E], R) ->
-    [E | R];
-compress_prefixes([A, B | R], Acc) ->
-    case binary:longest_common_prefix([A, B]) of
-        L when L == byte_size(A) ->
-            compress_prefixes([B | R], Acc);
-        _ ->
-            compress_prefixes([B | R], [A | Acc])
-    end.
 
 %%%===================================================================
 %%% Internal functions
@@ -451,13 +425,6 @@ glob_match(G, Ms) ->
             {ok, Res}
     end.
 
-glob_prefix([], Prefix) ->
-    dproto:metric_from_list(lists:reverse(Prefix));
-glob_prefix(['*' |_], Prefix) ->
-    dproto:metric_from_list(lists:reverse(Prefix));
-glob_prefix([E | R], Prefix) ->
-    glob_prefix(R, [E | Prefix]).
-
 
 
 rmatch(['*' | Rm], <<_S:?METRIC_ELEMENT_SS/?SIZE_TYPE, _:_S/binary, Rb/binary>>) ->
@@ -480,7 +447,7 @@ needs_buckets({calc, _Steps, {combine, _Func, _CSteps} = Comb}, Buckets) ->
     needs_buckets(Comb, Buckets);
 
 needs_buckets({calc, _Steps, {sget, {Bucket, Glob}}}, Buckets) ->
-    orddict:append(Bucket, glob_prefix(Glob, []), Buckets);
+    orddict:append(Bucket, Glob, Buckets);
 
 needs_buckets({calc, _Steps, {get, _}}, Buckets) ->
     Buckets;
