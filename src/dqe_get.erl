@@ -27,7 +27,7 @@ start({Start, Count},
       State = #state{bucket = Bucket, metric = Metric, chunk = Chunk}) when
       Count >= Chunk ->
     %% We do a bit of cheating here this allows us to loop.
-    case dalmatiner_connection:get(Bucket, Metric, Start, Chunk) of
+    case ddb_connection:get(Bucket, Metric, Start, Chunk) of
         {error, _Error} ->
             {done, State};
         {ok, Res, <<>>} ->
@@ -39,7 +39,7 @@ start({Start, Count},
     end;
 
 start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
-    case dalmatiner_connection:get(Bucket, Metric, Start, Count) of
+    case ddb_connection:get(Bucket, Metric, Start, Count) of
         {error, _Error} ->
             {done, State};
         {ok, Res, <<>>} ->

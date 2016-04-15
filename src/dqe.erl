@@ -129,10 +129,10 @@ prepare(Query) ->
             Buckets2 =
                 [case Ps of
                      all ->
-                         {Bkt, dalmatiner_connection:list(Bkt)};
+                         {Bkt, ddb_connection:list(Bkt)};
                      _ ->
                          Ps1 = [begin
-                                    {ok, Ms} = dalmatiner_connection:list(Bkt, P),
+                                    {ok, Ms} = ddb_connection:list(Bkt, P),
                                     Ms
                                 end || P <- Ps],
                          Ps2 = lists:usort(lists:flatten(Ps1)),
