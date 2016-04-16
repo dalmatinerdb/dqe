@@ -27,7 +27,7 @@ describe(#state{aggr = Aggr, time = Time}) ->
 emit(Child, {realized, {Data, Resolution}},
      State = #state{resolution = undefined, time = Time}) ->
     Time1 = dqe_time:apply_times(Time, Resolution),
-    emit(Child, {Data, Resolution},
+    emit(Child, {realized, {Data, Resolution}},
          State#state{resolution = Time1 * Resolution, time = Time1});
 
 emit(_Child, {realized, {Data, _R}},
