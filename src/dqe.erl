@@ -14,7 +14,7 @@
 
 -export([prepare/1, run/1, run/2, error_string/1,
          %% Exports for meck
-         glob_match/2]).
+         glob_match/2, pdebug/4]).
 
 
 -type query_reply() :: [{Name :: binary(),
