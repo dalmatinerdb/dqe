@@ -500,6 +500,6 @@ pdebug(S, T0, M, E) ->
     pdebug(S, T0, erlang:system_time(), M, E).
 pdebug(S, T0, T1, M, E) ->
     D = T1 - T0,
-    MS = D / 1000,
-    lager:debug("[dqe:~s|~p|~pms] " ++ M, [S, MS, self() | E]).
+    MS = D / 1000 / 1000,
+    lager:debug("[dqe:~s|~p|~pms] " ++ M, [self(), S, MS | E]).
 
