@@ -226,17 +226,18 @@ prop_glob_match() ->
             end).
 
 mock() ->
+    application:ensure_all_started(dqe_connection),
     meck:new(dqe, [passthrough]),
     meck:expect(dqe, glob_match,
                 fun(_Glob, Metrics) ->
                         {ok, Metrics}
                 end),
-    meck:new(dalmatiner_connection),
-    meck:expect(dalmatiner_connection, list,
+    meck:new(ddb_connection),
+    meck:expect(ddb_connection, list,
                 fun (_) ->
                         {ok, [dproto:metric_from_list([<<"a">>])]}
                 end),
-    meck:expect(dalmatiner_connection, list,
+    meck:expect(ddb_connection, list,
                 fun (_, Prefix) ->
                         P1 = dproto:metric_to_list(Prefix),
                         {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
@@ -245,6 +246,6 @@ mock() ->
     fun unmock/0.
 
 unmock() ->
-    meck:unload(dalmatiner_connection),
+    meck:unload(ddb_connection),
     meck:unload(dqe),
     ok.

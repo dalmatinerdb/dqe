@@ -9,3 +9,4 @@ _build
 .eqc*
 current_counterexample.eqc
 rebar3.crashdump
+.rebar3
