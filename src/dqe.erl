@@ -83,28 +83,34 @@ run(Query) ->
                  {ok, Start::pos_integer(), query_reply()}.
 
 run(Query, Timeout) ->
+    T0 = erlang:system_time(),
     case prepare(Query) of
         {ok, {Parts, Start, Count}} ->
+            pdebug('query', T0, "preperation done.", []),
             WaitRef = make_ref(),
             Funnel = {dqe_funnel, [[{dqe_collect, [Part]} || Part <- Parts]]},
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
             {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
+            pdebug('query', T0, "flow generated.", []),
             dflow:start(Flow, {Start, Count}),
             case  dflow_send:recv(WaitRef, Timeout) of
                 {ok, [{error, no_results}]} ->
+                    pdebug('query', T0, "Query has no results.", []),
                     {error, no_results};
                 {ok, [Result]} ->
+                    pdebug('query', T0, "Query complete.", []),
                     Result1 = [Element || {points, Element} <- Result],
                     {ok, Start, Result1};
                 {ok, []} ->
+                    pdebug('query', T0, "Query has no results.", []),
                     {error, no_results};
                 E ->
+                    pdebug('query', T0, "Query error: ~p", [E]),
                     E
             end;
         E ->
             E
     end.
-
 %%--------------------------------------------------------------------
 %% @doc Prepares query exeuction, this can be used of the query is
 %% desired to be executed asyncrounously instead of using {@link run/2}
@@ -123,18 +129,26 @@ run(Query, Timeout) ->
                      {error, _}.
 
 prepare(Query) ->
+    T0 = erlang:system_time(),
     case dql:prepare(Query) of
         {ok, {Parts, Start, Count, _Res, Aliases, _SomethingElse}} ->
+            pdebug('prepare', T0, "Parsing done.", []),
             Buckets = needs_buckets(Parts, []),
+            pdebug('prepare', T0, "Buckets analyzed (~p).", [length(Buckets)]),
             Buckets1 = [begin
                             {ok, BMs} = dqe_idx:expand(B, Gs),
                             BMs
                         end || {B, Gs} <- Buckets],
+            pdebug('prepare', T0, "Buckets fetched.", []),
             Parts1 = expand_parts(Parts, Buckets1),
+            pdebug('prepare', T0, "Parts expanded.", []),
             case name_parts(Parts1, [], Aliases, Buckets1) of
                 {ok, Parts2} ->
+                    pdebug('prepare', T0, "Naing applied.", []),
+
                     {ok, {Parts2, Start, Count}};
                 E ->
+                    pdebug('prepare', T0, "Naing failed.", []),
                     E
             end;
         E ->
@@ -166,8 +180,10 @@ expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected];
 
 expand_part({calc, C, {lookup, Query}}, _Buckets) ->
-    io:format("Lookup: ~p~n", [Query]),
+    T0 = erlang:system_time(),
     {ok, Selected} = dqe_idx:lookup(Query),
+    pdebug('prepare', T0, "Looked up ~p metrics for ~p.",
+           [length(Selected), Query]),
     %% TODO fix naming
     [{keep, keep, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
 
@@ -479,3 +495,11 @@ needs_buckets({get, _}, Buckets) ->
 
 needs_buckets({lookup, _}, Buckets) ->
     Buckets.
+
+pdebug(S, T0, M, E) ->
+    pdebug(S, T0, erlang:system_time(), M, E).
+pdebug(S, T0, T1, M, E) ->
+    D = T1 - T0,
+    MS = D / 1000,
+    lager:debug("[dqe:~s|~p|~pms] " ++ M, [S, MS, self() | E]).
+
