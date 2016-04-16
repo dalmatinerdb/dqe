@@ -495,7 +495,7 @@ needs_buckets({lookup, _}, Buckets) ->
     Buckets.
 
 pdebug(S, M, E) ->
-    D = get(start) - erlang:system_time(),
+    D =  erlang:system_time() - get(start),
     MS = round(D / 1000 / 1000),
     lager:debug("[dqe:~s|~p|~pms] " ++ M, [S, self(), MS | E]).
 
