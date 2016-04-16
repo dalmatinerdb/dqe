@@ -29,7 +29,7 @@ describe(#state{htv = HTV, sf = SF, time = Time}) ->
 emit(Child, {realized, {Data, Resolution}},
      State = #state{resolution = undefined, time = Time}) ->
     Time1 = dqe_time:apply_times(Time, Resolution),
-    emit(Child, {Data, Resolution},
+    emit(Child, {realized, {Data, Resolution}},
          State#state{resolution = Time1 * Resolution, time = Time1});
 
 emit(_Child, {realized, {Data, _R}},
@@ -63,5 +63,6 @@ execute(_HTV, _SF, Acc, _, AccEmit) ->
 
 mk_hist(HVT, SF, Data) ->
     {ok, H} = hdr_histogram:open(HVT, SF),
-    [ hdr_histogram:record(H, V)|| V <- mmath_bin:to_list(mmath_bin:derealize(Data))],
+    _ = [ hdr_histogram:record(H, V)
+          || V <- mmath_bin:to_list(mmath_bin:derealize(Data))],
     H.
