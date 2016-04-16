@@ -139,44 +139,42 @@ lexer_error(Line, E)  ->
                                          [Line, E]))}.
 
 prepare(S) ->
-    T0 = erlang:system_time(),
     case parse(S) of
         {ok, {select, Qx, Aliasesx, Tx, Rx}} ->
-            dqe:pdebug('parse', T0, "Query parsed: ~s", [S]),
+            dqe:pdebug('parse', "Query parsed: ~s", [S]),
             R = prepare(Qx, Aliasesx, Tx, Rx),
-            dqe:pdebug('parse', T0, "Query Translated.", []),
+            dqe:pdebug('parse', "Query Translated.", []),
             {ok, R};
         {ok, {select, Qx, Tx, Rx}} ->
-            dqe:pdebug('parse', T0, "Query parsed: ~s", [S]),
+            dqe:pdebug('parse', "Query parsed: ~s", [S]),
             R = prepare(Qx, [], Tx, Rx),
-            dqe:pdebug('parse', T0, "Query Translated.", []),
+            dqe:pdebug('parse', "Query Translated.", []),
             {ok, R};
         E ->
             E
     end.
 
 prepare(Qs, Aliases, T, R) ->
-    T0 = erlang:system_time(),
     Rms = to_ms(R),
     T1 = apply_times(T, Rms),
-    dqe:pdebug('parse', T0, "Times normalized.", []),
+    dqe:pdebug('parse', "Times normalized.", []),
     {_AF, AliasesF, MetricsF} =
         lists:foldl(fun({alias, Alias, Resolution}, {QAcc, AAcc, MAcc}) ->
                             {Q1, A1, M1} = preprocess_qry(Resolution, AAcc, MAcc, Rms),
                             {[Q1 | QAcc], gb_trees:enter(Alias, Resolution, A1), M1}
                     end, {[], gb_trees:empty(), gb_trees:empty()}, Aliases),
-    dqe:pdebug('parse', T0, "Aliases resolved.", []),
+    dqe:pdebug('parse', "Aliases resolved.", []),
     {QQ, AliasesQ, MetricsQ} =
         lists:foldl(fun(Q, {QAcc, AAcc, MAcc}) ->
                             {Q1, A1, M1} = preprocess_qry(Q, AAcc, MAcc, Rms),
                             {[Q1 | QAcc] , A1, M1}
                     end, {[], AliasesF, MetricsF}, Qs),
-    dqe:pdebug('parse', T0, "Preprocessor done.", []),
+    dqe:pdebug('parse', "Preprocessor done.", []),
     QQ1 = lists:reverse(QQ),
     QQ2 = [flatten(Q) || Q <- QQ1],
-    dqe:pdebug('parse', T0, "Query flattened.", []),
+    dqe:pdebug('parse', "Query flattened.", []),
     {Start, Count} = compute_se(T1, Rms),
-    dqe:pdebug('parse', T0, "Time and resolutions adjusted.", []),
+    dqe:pdebug('parse', "Time and resolutions adjusted.", []),
     {QQ2, Start, Count, Rms, AliasesQ, MetricsQ}.
 
 compute_se({between, S, E}, _Rms) when E > S->
