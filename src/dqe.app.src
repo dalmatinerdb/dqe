@@ -4,7 +4,7 @@
               {registered,[]},
               {applications,[kernel,ddb_client,qdate,dflow,mmath,dproto,
                              stdlib,hdr_histogram,dqe_idx,dqe_idx_ddb,
-                             ddb_connection]},
+                             dqe_idx_pg, ddb_connection]},
               {env,[]},
               {maintainers,["Heinz N. Gies"]},
               {licenses,["MIT"]},
