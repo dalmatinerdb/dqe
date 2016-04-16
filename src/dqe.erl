@@ -501,5 +501,5 @@ pdebug(S, T0, M, E) ->
 pdebug(S, T0, T1, M, E) ->
     D = T1 - T0,
     MS = D / 1000 / 1000,
-    lager:debug("[dqe:~s|~p|~pms] " ++ M, [self(), S, MS | E]).
+    lager:debug("[dqe:~s|~p|~pms] " ++ M, [S, self(), MS | E]).
 
