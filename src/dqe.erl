@@ -166,6 +166,7 @@ expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected];
 
 expand_part({calc, C, {lookup, Query}}, _Buckets) ->
+    io:format("Lookup: ~p~n", [Query]),
     {ok, Selected} = dqe_idx:lookup(Query),
     %% TODO fix naming
     [{keep, keep, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
