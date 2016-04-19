@@ -85,12 +85,21 @@ run(Query) ->
 run(Query, Timeout) ->
     put(start, erlang:system_time()),
     case prepare(Query) of
-        {ok, {Parts, Start, Count}} ->
+        {ok, {Total, Unique, Parts, Start, Count}} ->
             pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
             Funnel = {dqe_funnel, [[{dqe_collect, [Part]} || Part <- Parts]]},
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
-            {ok, _Ref, Flow} = dflow:build(Sender, [optimize, terminate_when_done]),
+            %% We only optimize the flow when there are at least 10% duplicate
+            %% gets, or in other words if less then 90% of the requests are
+            %% unique
+            FlowOpts = case Unique / Total of
+                           UniquePercentage when UniquePercentage > 0.9 ->
+                               [terminate_when_done];
+                           _ ->
+                               [optimize, terminate_when_done]
+                       end,
+            {ok, _Ref, Flow} = dflow:build(Sender, FlowOpts),
             pdebug('query', "flow generated.", []),
             dflow:start(Flow, {Start, Count}),
             case  dflow_send:recv(WaitRef, Timeout) of
@@ -141,11 +150,14 @@ prepare(Query) ->
             pdebug('prepare', "Buckets fetched.", []),
             Parts1 = expand_parts(Parts, Buckets1),
             pdebug('prepare', "Parts expanded.", []),
+            {Total, Unique} = count_parts(Parts1),
+            pdebug('prepare', "Counting parts ~p total and ~p unique.",
+                   [Total, Unique]),
             case name_parts(Parts1, [], Aliases, Buckets1) of
                 {ok, Parts2} ->
                     pdebug('prepare', "Naing applied.", []),
 
-                    {ok, {Parts2, Start, Count}};
+                    {ok, {Total, Unique, Parts2, Start, Count}};
                 E ->
                     pdebug('prepare', "Naing failed.", []),
                     E
@@ -153,6 +165,20 @@ prepare(Query) ->
         E ->
             E
     end.
+
+count_parts(Parts) ->
+    Gets = [extract_gets(Part) || Part <- Parts],
+    Gets1 = lists:flatten(Gets),
+    Total = length(Gets1),
+    Unique = length(lists:usort(Gets1)),
+    {Total, Unique}.
+
+extract_gets({named, _, P}) ->
+    extract_gets(P);
+extract_gets({combine, _Fun, Parts}) ->
+    [extract_gets(P) || P <- Parts];
+extract_gets({calc, _, {get, {B, M}}}) ->
+    {get, {B, M}}.
 
 expand_parts(Parts, Buckets) ->
     Parts1 = [expand_part(P, Buckets) || P <- Parts],
