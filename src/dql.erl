@@ -290,8 +290,12 @@ unparse_metric([Metric | R], Acc) ->
 unparse_metric([], Acc) ->
     Acc.
 
-unparse_where({K, V}) ->
-    <<"'", K/binary, "' = '", V/binary, "'">>;
+unparse_tag({tag, <<>>, K}) ->
+    <<"'", K/binary, "'">>;
+unparse_tag({tag, N, K}) ->
+    <<"'", N/binary, "':'", K/binary, "'">>.
+unparse_where({'=', T, V}) ->
+    <<(unparse_tag(T))/binary, " = '", V/binary, "'">>;
 unparse_where({Operator, Clause1, Clause2}) ->
     P1 = unparse_where(Clause1),
     P2 = unparse_where(Clause2),
@@ -331,9 +335,9 @@ unparse({get, {B, M}}) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
 unparse({sget, {B, M}}) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
-unparse({lookup, {B, M}}) ->
+unparse({lookup, {in, B, M}}) ->
     <<(unparse_metric(M))/binary, " IN '", B/binary, "'">>;
-unparse({lookup, {B, M, Where}}) ->
+unparse({lookup, {in, B, M, Where}}) ->
     <<(unparse_metric(M))/binary, " IN '", B/binary,
       "' WHERE ", (unparse_where(Where))/binary>>;
 unparse({combine, Fun, L}) ->

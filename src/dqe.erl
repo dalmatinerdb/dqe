@@ -230,11 +230,11 @@ translate({calc, [], {get, {Bucket, Metric}}}, _Aliases, _Buckets) ->
 translate({calc, Aggrs, G}, Aliases, Buckets) ->
     FoldFn = fun({histogram, HTV, SF, T}, Acc) ->
                      {histogram, HTV, SF, Acc, T};
-                 ({Type, Fun}, Acc) ->
+                ({Type, Fun}, Acc) ->
                      {Type, Fun, Acc};
-                 ({Type, Fun, Arg1}, Acc) ->
+                ({Type, Fun, Arg1}, Acc) ->
                      {Type, Fun, Acc, Arg1};
-                 ({Type, Fun, Arg1, Arg2}, Acc) ->
+                ({Type, Fun, Arg1, Arg2}, Acc) ->
                      {Type, Fun, Acc, Arg1, Arg2}
              end,
     Recursive = lists:foldl(FoldFn, G, Aggrs),
@@ -495,7 +495,17 @@ needs_buckets({lookup, _}, Buckets) ->
     Buckets.
 
 pdebug(S, M, E) ->
-    D =  erlang:system_time() - get(start),
+    D =  erlang:system_time() - pstart(),
     MS = round(D / 1000 / 1000),
     lager:debug("[dqe:~s|~p|~pms] " ++ M, [S, self(), MS | E]).
 
+
+pstart() ->
+    case get(start) of
+        N when is_integer(N) ->
+            N;
+        _ ->
+            N = erlang:system_time(),
+            put(start, N),
+            N
+    end.

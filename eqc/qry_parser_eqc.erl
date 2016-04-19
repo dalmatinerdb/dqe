@@ -124,12 +124,17 @@ lookup() ->
     ?SIZED(S, lookup(S)).
 
 lookup(0) ->
-    bm();
+    {in, bucket(), metric()};
 lookup(S) ->
-    {bucket(), metric(), where_clause(S)}.
+    {in, bucket(), metric(), where_clause(S)}.
+
+tag() ->
+    frequency(
+      [{10, {tag, non_empty_binary(), non_empty_binary()}},
+       {1,  {tag, <<>>, non_empty_binary()}}]).
 
 where_clause(S) when S =< 1 ->
-    {non_empty_binary(), non_empty_binary()};
+    {'=', tag(), non_empty_binary()};
 where_clause(S) ->
     ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
 

@@ -2,9 +2,9 @@
 Nonterminals
 funs fun selector select timeframe aliases alias resolution int_or_time mb fune
 var pit metric glob_metric part_or_name calculatable bucket gmb calculatables
-infix hist mfrom where where_part.
+infix hist mfrom where where_part tag.
 
-Terminals '(' ')' ',' '.' '*' '/' '='
+Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
 kw_between kw_and kw_or kw_ago kw_now derivate time math float name
 kw_after kw_before kw_for histogram percentile avg hfun mm kw_where.
@@ -86,14 +86,19 @@ mb -> metric kw_bucket part_or_name : {'$3', '$1'}.
 
 gmb -> glob_metric kw_bucket bucket : {'$3', '$1'}.
 
-mfrom -> metric kw_in bucket : {'$3', '$1'}.
-mfrom -> metric kw_in bucket kw_where where : {'$3', '$1', '$5'}.
+mfrom -> metric kw_in bucket : {in, '$3', '$1'}.
+mfrom -> metric kw_in bucket kw_where where : {in, '$3', '$1', '$5'}.
 
-where_part -> part_or_name '=' part_or_name : {'$1', '$3'}.
-where_part -> '(' where ')' : '$2'.
-where -> where_part : '$1'.
+
+tag -> part_or_name                  : {tag, <<>>, '$1'}.
+tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.
+
+where_part -> tag '=' part_or_name : {'=', '$1', '$3'}.
+where_part -> '(' where ')'        : '$2'.
+
+where -> where_part              : '$1'.
 where -> where kw_and where_part : {'and', '$1', '$3'}.
-where -> where kw_or where_part : {'or', '$1', '$3'}.
+where -> where kw_or where_part  : {'or', '$1', '$3'}.
 
 %%%===================================================================
 %%% From section, aliased selectors
