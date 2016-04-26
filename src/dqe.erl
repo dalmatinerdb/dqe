@@ -180,7 +180,9 @@ extract_gets({named, _, P}) ->
     extract_gets(P);
 extract_gets({combine, _Fun, Parts}) ->
     [extract_gets(P) || P <- Parts];
-extract_gets({calc, _, {get, {B, M}}}) ->
+extract_gets({calc, _, C}) ->
+    extract_gets(C);
+extract_gets({get, {B, M}}) ->
     {get, {B, M}}.
 
 expand_parts(Parts, Buckets) ->
