@@ -85,6 +85,9 @@ run(Query) ->
 run(Query, Timeout) ->
     put(start, erlang:system_time()),
     case prepare(Query) of
+        {ok, {0, 0, _Parts, _Start, _Count}} ->
+            pdebug('query', "prepare found no metrics.", []),
+            {error, no_results};
         {ok, {Total, Unique, Parts, Start, Count}} ->
             pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
@@ -202,22 +205,27 @@ expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
 expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
     Ms = orddict:fetch(B, Buckets),
     {ok, Selected} = dqe:glob_match(G, Ms),
-    [{M, G, {calc, C, {get, {B, M}}}} || M <- Selected];
+    [{{metric, M}, {glob, G}, {calc, C, {get, {B, M}}}} || M <- Selected];
 
 expand_part({calc, C, {lookup, Query}}, _Buckets) ->
     {ok, Selected} = dqe_idx:lookup(Query),
     pdebug('prepare', "Looked up ~p metrics for ~p.",
            [length(Selected), Query]),
-    %% TODO fix naming
-    [{keep, keep, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
+    [{{get, {B, M}}, Query, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
 
 update_name(Name, keep, keep) ->
     Name;
-update_name(Name, Metric, Glob) ->
+update_name(Name, {metric, Metric}, {glob, Glob}) ->
     MList = dproto:metric_to_list(Metric),
     GStr = dql:unparse_metric(Glob),
     MStr = dql:unparse_metric(MList),
-    binary:replace(Name, GStr, MStr).
+    binary:replace(Name, GStr, MStr);
+
+update_name(Name, {get, {Bucket, Metric}}, Lookup = {lookup, _}) ->
+    MList = dproto:metric_to_list(Metric),
+    LStr = dql:unparse(Lookup),
+    GStr = dql:unparse({get, {Bucket, MList}}),
+    binary:replace(Name, LStr, GStr).
 
 name_parts([Q | R], Acc, Aliases, Buckets) ->
     case name(Q, Aliases, Buckets) of
