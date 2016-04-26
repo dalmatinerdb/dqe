@@ -52,8 +52,8 @@ done(_Child, State = #state{htv = HTV, sf = SF, acc = Acc}) ->
     {done, {histograms, {[Data], State#state.resolution}}, State#state{acc = <<>>}}.
 
 
-execute(HTV, SF, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * ?DATA_SIZE ->
-    MinSize = T1 * ?DATA_SIZE,
+execute(HTV, SF, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * ?RDATA_SIZE ->
+    MinSize = T1 * ?RDATA_SIZE,
     <<Data:MinSize/binary, Acc1/binary>> = Acc,
     H = mk_hist(HTV, SF, Data),
     execute(HTV, SF, Acc1, T1, [H | AccEmit]);
