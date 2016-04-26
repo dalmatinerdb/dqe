@@ -211,7 +211,8 @@ expand_part({calc, C, {lookup, Query}}, _Buckets) ->
     {ok, Selected} = dqe_idx:lookup(Query),
     pdebug('prepare', "Looked up ~p metrics for ~p.",
            [length(Selected), Query]),
-    [{{get, {B, M}}, Query, {calc, C, {get, {B, M}}}} || {B, M} <- Selected].
+    [{{get, {B, M}}, {lookup, Query}, {calc, C, {get, {B, M}}}}
+     || {B, M} <- Selected].
 
 update_name(Name, keep, keep) ->
     Name;
