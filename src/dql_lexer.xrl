@@ -61,6 +61,7 @@ Rules.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
 
 derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
+confidence  :   {token, {confidence,    TokenLine, a(TokenChars)}}.
 {AGGR}      :   {token, {aggr,          TokenLine, a(TokenChars)}}.
 {MM}        :   {token, {mm,            TokenLine, a(TokenChars)}}.
 {AVG}       :   {token, {avg,           TokenLine, a(TokenChars)}}.

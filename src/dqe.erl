@@ -301,6 +301,14 @@ translate({aggr, derivate, SubQ}, Aliases, Buckets) ->
             E
     end;
 
+translate({aggr, confidence, SubQ}, Aliases, Buckets) ->
+    case translate(SubQ, Aliases, Buckets) of
+        {ok, SubQ1} ->
+            {ok, {dqe_aggr1, [confidence_r, SubQ1]}};
+        E ->
+            E
+    end;
+
 
 %%--------------------------------------------------------------------
 %% Historam

@@ -7,7 +7,8 @@ infix hist mfrom where where_part tag.
 Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
 kw_between kw_and kw_or kw_ago kw_now derivate time math float name
-kw_after kw_before kw_for histogram percentile avg hfun mm kw_where.
+kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
+confidence.
 
 
 %%%===================================================================
@@ -61,6 +62,7 @@ fun -> avg        '(' hist          ')' : {hfun, avg, '$3'}.
 fun -> percentile '(' hist          ',' float ')' : {hfun, percentile, '$3', unwrap('$5')}.
 %% A aggregation function
 fun -> derivate   '(' calculatable  ')' : {aggr, derivate, '$3'}.
+fun -> confidence '(' calculatable  ')' : {aggr, confidence, '$3'}.
 fun -> mm         '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
 fun -> aggr       '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
 fun -> avg        '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
