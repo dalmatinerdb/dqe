@@ -19,6 +19,7 @@ AVG     = (avg)
 HFUN    = (mean|median|stddev)
 AGGR    = (empty)
 CAGGR   = (sum)
+TRANS   = (derivate|confidence)
 MATH    = (divide|multiply)
 HIST    = (histogram)
 PERC    = (percentile)
@@ -60,8 +61,7 @@ Rules.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
 
-derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
-confidence  :   {token, {confidence,    TokenLine, a(TokenChars)}}.
+{TRANS}     :   {token, {trans,         TokenLine, a(TokenChars)}}.
 {AGGR}      :   {token, {aggr,          TokenLine, a(TokenChars)}}.
 {MM}        :   {token, {mm,            TokenLine, a(TokenChars)}}.
 {AVG}       :   {token, {avg,           TokenLine, a(TokenChars)}}.
