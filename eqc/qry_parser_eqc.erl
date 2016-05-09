@@ -22,7 +22,10 @@ time_unit() ->
     oneof([ms, s, m, h, d, w]).
 
 time_type() ->
-    {time, pos_int(), time_unit()}.
+    #{op => time,
+      return => integer,
+      signature => [integer,time_unit],
+      args => [pos_int(), time_unit()]}.
 
 aggr_range() ->
     oneof([time_type(), pos_int()]).
@@ -34,26 +37,27 @@ rel_time() ->
     oneof([
            pos_int(),
            now,
-           {ago, time_type()}
+           #{op => ago, args => [time_type()]}
           ]).
 
 hfun() ->
     oneof([min, max, avg, mean, median, stddev]).
 
 
+aliases() ->
+    [].
+
 qry_tree() ->
     {select,
      non_empty_list(?SIZED(Size, qry_tree(Size))),
+     aliases(),
      oneof([
-            {last, pos_int()},
-            {between, rel_time(), pos_int()},
-            {before, rel_time(), pos_int()},
-            {'after', pos_int(), pos_int()}
-           ]),
-     time_type()}.
+            #{op => last, args => [pos_int()]},
+            #{op => between, args => [rel_time(), pos_int()]},
+            #{op => before, args => [rel_time(), pos_int()]},
+            #{op => 'after', args => [pos_int(), pos_int()]}
+           ])}.
 
-comb_fun() ->
-    oneof([sum, avg]).
 aggr_fun() ->
     oneof([sum, min, max, avg]).
 
@@ -63,18 +67,43 @@ percentile() ->
 comb_tree(Size) ->
     ?LETSHRINK(
        [QL, QR], [qry_tree(Size - 1), qry_tree(Size - 1)],
-       {combine, comb_fun(), [QL, QR]}).
+       comb(QL, QR)).
 aggr_tree(Size) ->
     ?LETSHRINK(
        [Q], [qry_tree(Size - 1)],
        oneof(
          [
-          {combine, comb_fun(), [Q]},
-          {aggr, derivate, Q},
-          {aggr, aggr_fun(), Q, aggr_range()},
-          {math, multiply, Q, pos_int()},
-          {math, divide, Q, pos_int()}
+          aggr1(Q),
+          aggr2(Q),
+          comb(Q)
+%%          {math, multiply, Q, pos_int()},
+%%          {math, divide, Q, pos_int()}
          ])).
+
+
+aggr2_fun() ->
+    oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>]).
+aggr2(Q) ->
+    #{op => fcall,
+      args => #{name => aggr2_fun(),
+                inputs => [Q, aggr_range()]}}.
+aggr1_fun() ->
+    oneof([<<"derivate">>]).
+aggr1(Q) ->
+    #{op => fcall,
+      args => #{name => aggr1_fun(),
+                inputs => [Q]}}.
+comb_fun() ->
+    oneof([<<"sum">>]).
+comb(Q) ->
+    #{op => fcall,
+      args => #{name => comb_fun(),
+                inputs => [Q]}}.
+comb(QL, QR) ->
+    #{op => fcall,
+      args => #{name => comb_fun(),
+                inputs => [QL, QR]}}.
+
 
 significant_figures() ->
     choose(1,5).
@@ -89,17 +118,35 @@ hist_tree(Size) ->
                    {hfun, percentile, H, percentile()}
                    ]))).
 
+get_f() ->
+    #{
+      op        => get,
+      args      => bm(),
+      signature => [integer, integer, integer, metric, bucket],
+      return    => metric
+    }.
+
+sget_f() ->
+    #{
+      op        => sget,
+      args      => glob_bm(),
+      signature => [integer, integer, integer, glob, bucket],
+      return    => metric
+    }.
+
 qry_tree(S) when S < 1->
     oneof([
-           {get, bm()},
-           {sget, glob_bm()},
-           {lookup, lookup()}
+           get_f(),
+           sget_f()
+           %%{lookup, lookup()}
           ]);
+
 
 qry_tree(Size) ->
     ?LAZY(frequency(
-            [{1, comb_tree(Size)},
-             {1, hist_tree(Size)},
+            [
+             %%{1, comb_tree(Size)},
+             %%{1, hist_tree(Size)},
              {10, aggr_tree(Size)}]
            )).
 
@@ -115,10 +162,10 @@ glob_metric() ->
               lists:member('*', L)).
 
 glob_bm() ->
-    {bucket(), glob_metric()}.
+    [bucket(), glob_metric()].
 
 bm() ->
-    {bucket(), metric()}.
+    [bucket(), metric()].
 
 lookup() ->
     ?SIZED(S, lookup(S)).
@@ -196,18 +243,19 @@ prop_qery_parse_unparse() ->
             end).
 
 prop_prepare() ->
-    ?FORALL(T, qry_tree(),
-            begin
-                Unparsed = ?P:unparse(T),
-                case ?P:prepare(Unparsed) of
-                    {ok, _} ->
-                        true;
-                    {error, E} ->
-                        io:format(user, "   ~p~n-> ~p~n-> ~p~n",
-                                  [T, Unparsed, E]),
-                        false
-                end
-            end).
+    ?SETUP(fun ensure_dqe_fun/0,
+           ?FORALL(T, qry_tree(),
+                   begin
+                       Unparsed = ?P:unparse(T),
+                       case ?P:prepare(Unparsed) of
+                           {ok, _} ->
+                               true;
+                           {error, E} ->
+                               io:format(user, "   ~p~n-> ~p~n-> ~p~n",
+                                         [T, Unparsed, E]),
+                               false
+                       end
+                   end)).
 
 prop_dflow_prepare() ->
     ?SETUP(fun mock/0,
@@ -247,10 +295,22 @@ mock() ->
                         P1 = dproto:metric_to_list(Prefix),
                         {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
                 end),
-
+    ensure_dqe_fun(),
     fun unmock/0.
 
 unmock() ->
     meck:unload(ddb_connection),
     meck:unload(dqe),
     ok.
+
+ensure_dqe_fun() ->
+    try
+        dqe_fun:init(),
+        dqe:init()
+    catch
+        _:_ ->
+            ok
+    end,
+    fun() ->
+            ok
+    end.
