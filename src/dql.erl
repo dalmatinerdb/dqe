@@ -95,6 +95,9 @@ flatten({get, _} = Get, Chain) ->
 flatten({lookup, _} = Lookup, Chain) ->
     {calc, Chain, Lookup};
 
+flatten({var, _} = Var, Chain) ->
+    {calc, Chain, Var};
+
 flatten({combine, Aggr, Children}, []) ->
     Children1 = [flatten(C, []) || C <- Children],
     {combine, Aggr, Children1};
