@@ -283,32 +283,7 @@ translate({combine, Fun, Parts}, Aliases, Buckets) ->
     Parts3 = keep_optimizing_sum(Parts2),
     %% TODO: this is a hack we need to fix the optimisation!
     Parts4 = lists:flatten(Parts3),
-    case Fun of
-        sum ->
-            {ok, {dqe_sum, [Parts4]}};
-        avg ->
-            {ok, {dqe_math, [divide_r, {dqe_sum, [Parts4]}, length(Parts)]}}
-    end;
-
-%%--------------------------------------------------------------------
-%% One value aggregates
-%%--------------------------------------------------------------------
-translate({aggr, derivate, SubQ}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr1, [derivate_r, SubQ1]}};
-        E ->
-            E
-    end;
-
-translate({aggr, confidence, SubQ}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr1, [confidence_r, SubQ1]}};
-        E ->
-            E
-    end;
-
+    {ok, {dqe_comb, [Fun, Parts4]}};
 
 %%--------------------------------------------------------------------
 %% Historam
@@ -347,90 +322,35 @@ translate({histogram, _HighestTrackableValue,
     {error, significant_figures};
 
 %%--------------------------------------------------------------------
-%% Math
+%% Transformation functions
 %%--------------------------------------------------------------------
 
-translate({math, multiply, SubQ, Arg}, Aliases, Buckets)
-  when is_integer(Arg) ->
+translate({trans, Fun, SubQ}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [mul_r, SubQ1, Arg]}};
+            {ok, {dqe_trans1, [Fun, SubQ1]}};
         E ->
             E
     end;
 
-translate({math, multiply, SubQ, Arg}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_math, [scale_r, SubQ1, Arg]}};
-        E ->
-            E
-    end;
+translate({trans, multiply, SubQ, Arg}, Aliases, Buckets) ->
+    translate({trans, mul, SubQ, Arg}, Aliases, Buckets);
 
-translate({math, divide, SubQ, Arg}, Aliases, Buckets)
-  when is_integer(Arg) ->
+translate({trans, Fun, SubQ, Arg}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_math, [divide_r, SubQ1, Arg]}};
-        E ->
-            E
-    end;
-
-translate({math, divide, SubQ, Arg}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_math, [scale_r, SubQ1, 1/Arg]}};
+            {ok, {dqe_trans, [Fun, SubQ1, Arg]}};
         E ->
             E
     end;
 
 %%--------------------------------------------------------------------
-%% Two argument aggregaets
+%% Aggregation functions
 %%--------------------------------------------------------------------
-translate({aggr, min, SubQ, Time}, Aliases, Buckets) ->
+translate({aggr, Fun, SubQ, Time}, Aliases, Buckets) ->
     case translate(SubQ, Aliases, Buckets) of
         {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [min_r, SubQ1, dqe_time:to_ms(Time)]}};
-        E ->
-            E
-    end;
-
-translate({aggr, max, SubQ, Time}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [max_r, SubQ1, dqe_time:to_ms(Time)]}};
-        E ->
-            E
-    end;
-
-translate({aggr, empty, SubQ, Time}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [empty_r, SubQ1, dqe_time:to_ms(Time)]}};
-        E ->
-            E
-    end;
-
-translate({aggr, sum, SubQ, Time}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [sum_r, SubQ1, dqe_time:to_ms(Time)]}};
-        E ->
-            E
-    end;
-
-translate({aggr, avg, SubQ, Time}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr2, [avg_r, SubQ1, dqe_time:to_ms(Time)]}};
-        E ->
-            E
-    end;
-
-translate({aggr, percentile, SubQ, Arg, Time}, Aliases, Buckets) ->
-    case translate(SubQ, Aliases, Buckets) of
-        {ok, SubQ1} ->
-            {ok, {dqe_aggr3, [percentile, SubQ1, Arg, dqe_time:to_ms(Time)]}};
+            {ok, {dqe_aggr2, [Fun, SubQ1, dqe_time:to_ms(Time)]}};
         E ->
             E
     end;
@@ -461,17 +381,17 @@ keep_optimizing_sum(Gets) ->
     Gets.
 
 optimize_sum([G1, G2, G3, G4]) ->
-    [{dqe_sum, [[G1, G2, G3, G4]]}];
+    [{dqe_comb, [sum, [G1, G2, G3, G4]]}];
 
 optimize_sum([G1, G2, G3, G4 | GRest]) ->
-    [{dqe_sum, [[G1, G2, G3, G4]]} | optimize_sum(GRest)];
+    [{dqe_comb, [sum, [G1, G2, G3, G4]]} | optimize_sum(GRest)];
 
 
 optimize_sum([Get]) ->
     [Get];
 
 optimize_sum(Gets) ->
-    [{dqe_sum, [Gets]}].
+    [{dqe_comb, [sum, Gets]}].
 
 
 glob_match(G, Ms) ->

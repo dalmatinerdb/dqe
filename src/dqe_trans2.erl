@@ -1,4 +1,4 @@
--module(dqe_math).
+-module(dqe_trans2).
 -behaviour(dflow).
 
 -export([init/1, describe/1, start/2, emit/3, done/2]).
@@ -19,8 +19,9 @@ describe(#state{op = Op, arg = Arg}) when is_integer(Arg) ->
 start({_Start, _Count}, State) ->
     {ok, State}.
 
-emit(_Child, {realized, {Data, Resolution}}, State = #state{op = Op, arg = Arg}) ->
-    {emit, {realized, {mmath_aggr:Op(Data, Arg), Resolution}}, State}.
+emit(_Child, {realized, {Data, Resolution}},
+     State = #state{op = Op, arg = Arg}) ->
+    {emit, {realized, {mmath_trans:Op(Data, Arg), Resolution}}, State}.
 
 done({last, _Child}, Aggr) ->
     {done, Aggr}.

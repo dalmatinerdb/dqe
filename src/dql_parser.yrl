@@ -6,9 +6,8 @@ infix hist mfrom where where_part tag.
 
 Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part caggr aggr integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
-kw_between kw_and kw_or kw_ago kw_now derivate time math float name
-kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
-confidence.
+kw_between kw_and kw_or kw_ago kw_now trans time math float name
+kw_after kw_before kw_for histogram percentile avg hfun mm kw_where.
 
 
 %%%===================================================================
@@ -55,24 +54,25 @@ hist -> histogram '(' integer ',' integer ',' calculatable ',' int_or_time ')'
 %% Histogram related functions
 
 
-%% Histogram based aggregation functiosn
+%% Histogram based aggregation functions
 fun -> mm         '(' hist          ')' : {hfun, unwrap('$1'), '$3'}.
 fun -> hfun       '(' hist          ')' : {hfun, unwrap('$1'), '$3'}.
 fun -> avg        '(' hist          ')' : {hfun, avg, '$3'}.
 fun -> percentile '(' hist          ',' float ')' : {hfun, percentile, '$3', unwrap('$5')}.
-%% A aggregation function
-fun -> derivate   '(' calculatable  ')' : {aggr, derivate, '$3'}.
-fun -> confidence '(' calculatable  ')' : {aggr, confidence, '$3'}.
+%% Transformation functions
+fun -> trans      '(' calculatable  ')' : {trans, unwrap('$1'), '$3'}.
+fun -> math       '(' calculatable  ',' integer ')' : {trans, unwrap('$1'), '$3', unwrap('$5')}.
+%% Aggregation functions
 fun -> mm         '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
 fun -> aggr       '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> avg        '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
 fun -> avg        '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> caggr      '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
 fun -> caggr      '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
-fun -> math       '(' calculatable  ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
+%% Combining functions
+fun -> avg        '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
+fun -> caggr      '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
 
-infix -> calculatable '/' integer : {math, divide, '$1', unwrap('$3')}.
-infix -> calculatable '*' integer : {math, multiply, '$1', unwrap('$3')}.
+infix -> calculatable '/' integer : {trans, divide, '$1', unwrap('$3')}.
+infix -> calculatable '*' integer : {trans, multiply, '$1', unwrap('$3')}.
 
 
 %% A variable.
