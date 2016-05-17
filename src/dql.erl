@@ -80,7 +80,7 @@ resolve_functions(#{op := fcall, args := #{name   := Function,
             Constants = [C || {C, true} <- Args2],
             Inputs = [C || {C, false} <- Args2],
             case dqe_fun:lookup(Function, Types) of
-                {ok,{{_,_,_}, ReturnType, FunMod}} ->
+                {ok,{{_, none, _}, ReturnType, FunMod}} ->
                     FArgs = #{name      => Function,
                               orig_args => Args,
                               mod       => FunMod,
@@ -88,6 +88,18 @@ resolve_functions(#{op := fcall, args := #{name   := Function,
                               constants => Constants},
                     {ok, #{
                        op => fcall,
+                       args => FArgs,
+                       signature => Types,
+                       return => ReturnType
+                      }};
+                {ok,{{_, _, _}, ReturnType, FunMod}} ->
+                    FArgs = #{name      => Function,
+                              orig_args => Args,
+                              mod       => FunMod,
+                              inputs    => Inputs,
+                              constants => Constants},
+                    {ok, #{
+                       op => combine,
                        args => FArgs,
                        signature => Types,
                        return => ReturnType
@@ -160,7 +172,10 @@ get_times(O = #{op := named, args := [N, C]}, T, BucketResolutions) ->
         E ->
             E
     end;
-get_times({calc, Chain, {comb, F, Elements}}, T, BucketResolutions) ->
+get_times({calc, Chain,
+           {combine,
+            F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
+          }, T, BucketResolutions) ->
     Res = lists:foldl(fun (E, {ok, Acc, BRAcc}) ->
                               case get_times(E, T, BRAcc) of
                                   {ok, E1, BR1} ->
@@ -177,7 +192,14 @@ get_times({calc, Chain, {comb, F, Elements}}, T, BucketResolutions) ->
             case lists:usort(Rmss) of
                 [{ok, Rms}] ->
                     Elements2 = lists:reverse(Elements1),
-                    Comb1 = {comb, F#{resolution => Rms}, Elements2},
+                    Cs1 = [map_costants(C) || C <- Cs],
+                    State = FMod:init(Cs1),
+                    Chunk = FMod:resolution(Rms, State),
+                    Rms1 = Rms * Chunk,
+                    A1 = A#{constants => Cs1, state => State},
+                    F1 = F#{args => A1,
+                            resolution => Rms1},
+                    Comb1 = {combine, F1, Elements2},
                     Calc1 = {calc, Chain, Comb1},
                     {ok, apply_times(Calc1), BR};
                 _ ->
@@ -192,7 +214,8 @@ get_times({calc, Chain, Get}, T, BucketResolutions) ->
         {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} ->
             T1 = apply_times(T, Rms),
             {Start, Count} = compute_se(T1, Rms),
-            Calc1 = {calc, Chain, Get1#{args => [Start, Count | A]}},
+            Calc1 = {calc, Chain, Get1#{resolution => Rms,
+                                        args => [Start, Count | A]}},
             {ok, apply_times(Calc1), BucketResolutions1};
         E ->
             E
@@ -214,9 +237,9 @@ apply_times(#{op := named, args := [N, C]}) ->
     C1 = apply_times(C),
     {named, N, C1};
 
-apply_times({calc, Chain, {comb, F, Elements}}) ->
+apply_times({calc, Chain, {combine, F, Elements}}) ->
     Elements1 = [apply_times(E) || E <- Elements],
-    {calc, Chain, {comb, F, Elements1}};
+    {calc, Chain, {combine, F, Elements1}};
 
 apply_times({calc, Chain, Get}) ->
     {ok, Rms} = get_resolution(Get),
@@ -274,15 +297,19 @@ flatten(F = #{op   := fcall,
     Args2 = maps:remove(orig_args, Args1),
     flatten(Child, [F#{args => Args2} | Chain]);
 
-flatten(F = #{op   := fcall,
-              args := Args = #{inputs := Children = [_|_]}}, Chain) ->
+flatten(F = #{op   := combine,
+              args := Args = #{inputs := Children}}, Chain) ->
     Args1 = maps:remove(orig_args, Args),
     Args2 = maps:remove(inputs, Args1),
     Children1 = [flatten(C, []) || C <- Children],
-    Comb = {comb, F#{args => Args2}, Children1},
+    Comb = {combine, F#{args => Args2}, Children1},
     {calc, Chain, Comb};
 
 flatten(Get = #{op := get},
+        Chain) ->
+    {calc, Chain, Get};
+
+flatten(Get = #{op := lookup},
         Chain) ->
     {calc, Chain, Get};
 
@@ -386,7 +413,13 @@ resolve_query_functions(Qs, T, Metrics) ->
 flatten(Qs, T, Metrics) ->
     Qs1 = [flatten(Q) || Q <- Qs],
     dqe:pdebug('parse', "Query flattened.", []),
-    get_resolution(Qs1, T, Metrics).
+    expand(Qs1, T, Metrics).
+
+expand(Qs, T, Metrics) ->
+    %%io:format("Qs:~p~n", [Qs]),
+    Qs1 = [expand(Q) || Q <- Qs],
+    Qs2 = lists:flatten(Qs1),
+    get_resolution(Qs2, T, Metrics).
 
 get_resolution(Qs, T, Metrics) ->
     {Qs1, _} = lists:foldl(fun (Q, {QAcc, RAcc}) ->
@@ -399,6 +432,35 @@ get_resolution(Qs, T, Metrics) ->
 propagate_resolutions(Qs, Metrics) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
     {ok, {Qs1, Metrics}}.
+
+
+expand(Q = #{op := named, args := [N, S]}) ->
+    [Q#{args => [N, S1]} || S1 <- expand(S)];
+expand({calc, Fs, Q}) ->
+    [{calc, Fs, Q1} || Q1 <- expand(Q)];
+expand({combine, F, Qs}) ->
+    [{combine, F, lists:flatten([expand(Q) || Q <- Qs])}];
+expand(Q = #{op := get}) ->
+    [Q];
+expand(Q = #{op := lookup,
+             args := [Collection, Metric, Where]}) ->
+    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}),
+    Q1 = Q#{op := get},
+    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
+expand(Q = #{op := lookup,
+             args := [Collection, Metric]}) ->
+    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}),
+    Q1 = Q#{op := get},
+    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
+
+expand(Q = #{op := sget,
+             args := [Bucket, Glob]}) ->
+    %% Glob is in an extra list since expand is build to use one or more
+    %% globs
+    {ok, {_Bucket, Ms}} = dqe_idx:expand(Bucket, [Glob]),
+    Q1 = Q#{op := get},
+    [Q1#{args => [Bucket, Key]} || Key <- Ms].
+
 
 %%     compute_times(Qs1, T, Metrics).
 
@@ -440,6 +502,8 @@ preprocess_qry(O = #{op := G, args := BM}, Aliases, Metrics)
                end,
     {O, Aliases, Metrics1};
 
+preprocess_qry(O = #{op := lookup}, Aliases, Metrics) ->
+    {O, Aliases, Metrics};
 
 preprocess_qry(O = #{op   := fcall,
                      args := Args = #{inputs := Input}},
@@ -589,14 +653,14 @@ unparse_tag({tag, N, K}) ->
     <<"'", N/binary, "':'", K/binary, "'">>.
 unparse_where({'=', T, V}) ->
     <<(unparse_tag(T))/binary, " = '", V/binary, "'">>;
-unparse_where({Operator, Clause1, Clause2}) ->
+unparse_where({'or', Clause1, Clause2}) ->
     P1 = unparse_where(Clause1),
     P2 = unparse_where(Clause2),
-    Op = case Operator of
-             'and' -> <<" AND ">>;
-             'or' -> <<" OR ">>
-         end,
-    <<P1/binary, Op/binary, "(", P2/binary,")">>.
+    <<P1/binary, " OR (", P2/binary, ")">>;
+unparse_where({'and', Clause1, Clause2}) ->
+    P1 = unparse_where(Clause1),
+    P2 = unparse_where(Clause2),
+    <<P1/binary, " AND (", P2/binary, ")">>.
 
 
 unparse(L) when is_list(L) ->
@@ -604,13 +668,19 @@ unparse(L) when is_list(L) ->
     Unparsed = combine(Ps, <<>>),
     Unparsed;
 
+%% unparse(#{op   := fcall,
+%%           args := #{name      := Name,
+%%                     orig_args := Args}}) ->
+%%                Qs = unparse(Args),
+%%                <<Name/binary, "(", Qs/binary, ")">>;
+
 unparse(#{op   := fcall,
           args := #{name      := Name,
-                    orig_args := Args}}) ->
+                    inputs    := Args}}) ->
                Qs = unparse(Args),
                <<Name/binary, "(", Qs/binary, ")">>;
 
-unparse(#{op   := fcall,
+unparse(#{op   := combine,
           args := #{name      := Name,
                     inputs    := Args}}) ->
                Qs = unparse(Args),
@@ -656,6 +726,12 @@ unparse(now) ->
 
 unparse(N) when is_integer(N)->
     <<(integer_to_binary(N))/binary>>;
+
+unparse(#{op := lookup, args := [B, M]}) ->
+    <<(unparse_metric(M))/binary, " IN '", B/binary, "'">>;
+unparse(#{op := lookup, args := [B, M, Where]}) ->
+    <<(unparse_metric(M))/binary, " IN '", B/binary,
+      "' WHERE ", (unparse_where(Where))/binary>>;
 
 unparse(X) ->
     io:format("Unparse old: ~p~n", [X]),

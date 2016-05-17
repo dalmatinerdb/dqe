@@ -7,9 +7,9 @@ infix mfrom var metric where where_part.
 %% hist  calculatables.
 
 Terminals '(' ')' ',' '.' '*' '/' '=' ':'
-part  integer kw_bucket kw_select kw_last kw_as kw_from kw_in date
+part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
-kw_after kw_before kw_for kw_where.
+kw_after kw_before kw_for kw_where kw_alias.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -23,7 +23,7 @@ Rootsymbol select.
 
 
 select -> kw_select funs timeframe : {select, '$2', [], '$3'}.
-select -> kw_select funs kw_from aliases timeframe : {select, '$2', '$4', '$5'}.
+select -> kw_select funs kw_alias aliases timeframe : {select, '$2', '$4', '$5'}.
 
 %%%===================================================================
 %%% SELECT part
@@ -102,15 +102,19 @@ selector -> gmb : #{
               signature => [integer, integer, integer, glob, bucket],
               return    => metric
              }.
-selector -> mfrom : {lookup, '$1'}.
+selector -> mfrom : #{
+              op => lookup,
+              args => '$1',
+              return => metric
+             }.
 
 %% A bucket and metric combination used as a solution
 mb -> metric kw_bucket part_or_name : ['$3', '$1'].
 
 gmb -> glob_metric kw_bucket bucket : ['$3', '$1'].
 
-mfrom -> metric kw_in bucket : {in, '$3', '$1'}.
-mfrom -> metric kw_in bucket kw_where where : {in, '$3', '$1', '$5'}.
+mfrom -> metric kw_from bucket : ['$3', '$1'].
+mfrom -> metric kw_from bucket kw_where where : ['$3', '$1', '$5'].
 
 
 tag -> part_or_name                  : {tag, <<>>, '$1'}.

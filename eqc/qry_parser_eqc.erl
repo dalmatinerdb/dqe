@@ -137,8 +137,8 @@ sget_f() ->
 qry_tree(S) when S < 1->
     oneof([
            get_f(),
-           sget_f()
-           %%{lookup, lookup()}
+           sget_f(),
+           lookup()
           ]);
 
 
@@ -168,12 +168,14 @@ bm() ->
     [bucket(), metric()].
 
 lookup() ->
-    ?SIZED(S, lookup(S)).
+    #{op   => lookup,
+      return => metric,
+      args => ?SIZED(S, lookup(S))}.
 
 lookup(0) ->
-    {in, bucket(), metric()};
+    [bucket(), metric()];
 lookup(S) ->
-    {in, bucket(), metric(), where_clause(S)}.
+    [bucket(), metric(), where_clause(S)].
 
 tag() ->
     frequency(
@@ -181,13 +183,13 @@ tag() ->
        {1,  {tag, <<>>, non_empty_binary()}}]).
 
 where_clause(S) when S =< 1 ->
-    {'=', tag(), non_empty_binary()};
+    #{op => '=', args => [tag(), non_empty_binary()]};
 where_clause(S) ->
     ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
 
 where_clause_choice(N, S) ->
-    oneof([{'and', where_clause(N), where_clause(S - N)},
-           {'or', where_clause(N), where_clause(S - N)}]).
+    oneof([#{op => 'and', args => [where_clause(N), where_clause(S - N)]},
+           #{op =>'or',   args => [where_clause(N), where_clause(S - N)]}]).
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),
@@ -243,7 +245,7 @@ prop_qery_parse_unparse() ->
             end).
 
 prop_prepare() ->
-    ?SETUP(fun ensure_dqe_fun/0,
+    ?SETUP(fun mock/0,
            ?FORALL(T, qry_tree(),
                    begin
                        Unparsed = ?P:unparse(T),

@@ -36,6 +36,7 @@
 start(_StartType, _StartArgs) ->
     case dqe_sup:start_link() of
         {ok, Pid} ->
+            dqe_idx:init(),
             {ok, Pid};
         Error ->
             Error

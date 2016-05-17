@@ -14,7 +14,7 @@ init([SubQs])  ->
 describe(_) ->
     "funnel".
 
-start({_Start, _Count}, State) ->
+start(_, State) ->
     {ok, State}.
 
 emit(Child, Data, State = #state{buffer = Buffer}) ->

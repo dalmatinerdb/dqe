@@ -100,13 +100,13 @@ run(Query) ->
 run(Query, Timeout) ->
     put(start, erlang:system_time()),
     case prepare(Query) of
-        {ok, {0, 0, _Parts, _Start, _Count}} ->
+        {ok, {0, 0, _Parts}} ->
             pdebug('query', "prepare found no metrics.", []),
             {error, no_results};
-        {ok, {Total, Unique, Parts, Start, Count}} ->
+        {ok, {Total, Unique, Parts}} ->
             pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
-            Funnel = {dqe_funnel, [[{dqe_collect, [Part]} || Part <- Parts]]},
+            Funnel = {dqe_funnel, [Parts]},
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
             %% We only optimize the flow when there are at least 10% duplicate
             %% gets, or in other words if less then 90% of the requests are
@@ -119,15 +119,16 @@ run(Query, Timeout) ->
                        end,
             {ok, _Ref, Flow} = dflow:build(Sender, FlowOpts),
             pdebug('query', "flow generated.", []),
-            dflow:start(Flow, {Start, Count}),
-            case  dflow_send:recv(WaitRef, Timeout) of
+            dflow:start(Flow, run),
+            case dflow_send:recv(WaitRef, Timeout) of
                 {ok, [{error, no_results}]} ->
                     pdebug('query', "Query has no results.", []),
                     {error, no_results};
                 {ok, [Result]} ->
                     pdebug('query', "Query complete.", []),
-                    Result1 = [Element || {points, Element} <- Result],
-                    {ok, Start, Result1};
+                    %% Result1 = [Element || {points, Element} <- Result],
+                    Start = -423, %%TODO: this isn't correct any more!
+                    {ok, Start, Result};
                 {ok, []} ->
                     pdebug('query', "Query has no results.", []),
                     {error, no_results};
@@ -160,21 +161,22 @@ prepare(Query) ->
         {ok, {Parts, Metrics}} ->
             pdebug('prepare', "Parsing done.", []),
             Buckets = [{B, G} ||
-                          {[B,[G]],{sget,_}} <- gb_trees:to_list(Metrics)],
+                          {[B,G],{sget,_}} <- gb_trees:to_list(Metrics)],
             Buckets1 = orddict:from_list(Buckets),
-            pdebug('prepare', "Buckets analyzed (~p).", [length(Buckets1)]),
-            Buckets2 = [begin
-                            io:format("{~p, ~p}~n", [B, Gs]),
-                            {ok, BMs} = dqe_idx:expand(B, Gs),
-                            BMs
-                        end || {B, Gs} <- Buckets1],
-            pdebug('prepare', "Buckets fetched.", []),
-            Parts1 = expand_parts(Parts, Buckets2),
-            pdebug('prepare', "Parts expanded.", []),
+            %% pdebug('prepare', "Buckets analyzed (~p).", [length(Buckets1)]),
+            %% Buckets2 = [begin
+            %%                 io:format("{~p, ~p}~n", [B, Gs]),
+            %%                 {ok, BMs} = dqe_idx:expand(B, Gs),
+            %%                 BMs
+            %%             end || {B, Gs} <- Buckets1],
+            %% pdebug('prepare', "Buckets fetched.", []),
+            %% Parts1 = expand_parts(Parts, Buckets2),
+            %% pdebug('prepare', "Parts expanded.", []),
+            Parts1 = Parts,
             {Total, Unique} = count_parts(Parts1),
             pdebug('prepare', "Counting parts ~p total and ~p unique.",
                    [Total, Unique]),
-            case name_parts(Parts1, [], Buckets1) of
+            case add_collect(Parts1, [], Buckets1) of
                 {ok, Parts2} ->
                     pdebug('prepare', "Naing applied.", []),
 
@@ -201,64 +203,69 @@ extract_gets({combine, _Fun, Parts}) ->
     [extract_gets(P) || P <- Parts];
 extract_gets({calc, _, C}) ->
     extract_gets(C);
+
+extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
+    {get, {B, M}};
+
 extract_gets({get, {B, M}}) ->
     {get, {B, M}}.
 
-expand_parts(Parts, Buckets) ->
-    Parts1 = [expand_part(P, Buckets) || P <- Parts],
-    lists:flatten(Parts1).
+%% expand_parts(Parts, Buckets) ->
+%%     Parts1 = [expand_part(P, Buckets) || P <- Parts],
+%%     lists:flatten(Parts1).
 
-expand_part({named, N, P}, Buckets) ->
-    %% TODO adjust the name here!
-    [{named, update_name(N, M, G), P1}
-     || {M, G, P1} <- expand_part(P, Buckets)];
-expand_part({combine, Fun, Parts}, Buckets) ->
-    Parts1 = [P || {_, _, P} <- expand_parts(Parts, Buckets)],
-    [{keep, keep, {combine, Fun, Parts1}}];
-expand_part({calc, C, #{op := get, args := [_, _, _, B, M]}}, _Buckets) ->
-    %% We convert the metric from a list to a propper metric here
-    [{keep, keep, {calc, C, {get, {B, dproto:metric_from_list(M)}}}}];
-expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
-    %% We convert the metric from a list to a propper metric here
-    [{keep, keep, Comb1}] = expand_part(Comb, Buckets),
-    [{keep, keep, {calc, C, Comb1}}];
+%% expand_part({named, N, P}, Buckets) ->
+%%     %% TODO adjust the name here!
+%%     [{named, update_name(N, M, G), P1}
+%%      || {M, G, P1} <- expand_part(P, Buckets)];
+%% expand_part({combine, Fun, Parts}, Buckets) ->
+%%     Parts1 = [P || {_, _, P} <- expand_parts(Parts, Buckets)],
+%%     [{keep, keep, {combine, Fun, Parts1}}];
+%% expand_part({calc, C, #{op := get, args := [_, _, _, B, M]}}, _Buckets) ->
+%%     %% We convert the metric from a list to a propper metric here
+%%     [{keep, keep, {calc, C, {get, {B, dproto:metric_from_list(M)}}}}];
+%% expand_part({calc, C, {combine, _, _}= Comb} , Buckets) ->
+%%     %% We convert the metric from a list to a propper metric here
+%%     [{keep, keep, Comb1}] = expand_part(Comb, Buckets),
+%%     [{keep, keep, {calc, C, Comb1}}];
 
-expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
-    Ms = orddict:fetch(B, Buckets),
-    {ok, Selected} = dqe:glob_match(G, Ms),
-    [{{metric, M}, {glob, G}, {calc, C, {get, {B, M}}}} || M <- Selected];
+%% expand_part({calc, C, {sget, {B, G}}}, Buckets) ->
+%%     Ms = orddict:fetch(B, Buckets),
+%%     {ok, Selected} = dqe:glob_match(G, Ms),
+%%     [{{metric, M}, {glob, G}, {calc, C, {get, {B, M}}}} || M <- Selected];
 
-expand_part({calc, C, {lookup, Query}}, _Buckets) ->
-    {ok, Selected} = dqe_idx:lookup(Query),
-    pdebug('prepare', "Looked up ~p metrics for ~p.",
-           [length(Selected), Query]),
-    [{{get, {B, M}}, {lookup, Query}, {calc, C, {get, {B, M}}}}
-     || {B, M} <- Selected].
+%% expand_part({calc, C, {lookup, Query}}, _Buckets) ->
+%%     {ok, Selected} = dqe_idx:lookup(Query),
+%%     pdebug('prepare', "Looked up ~p metrics for ~p.",
+%%            [length(Selected), Query]),
+%%     [{{get, {B, M}}, {lookup, Query}, {calc, C, {get, {B, M}}}}
+%%      || {B, M} <- Selected].
 
-update_name(Name, keep, keep) ->
-    Name;
-update_name(Name, {metric, Metric}, {glob, Glob}) ->
-    MList = dproto:metric_to_list(Metric),
-    GStr = dql:unparse_metric(Glob),
-    MStr = dql:unparse_metric(MList),
-    binary:replace(Name, GStr, MStr);
+%% update_name(Name, keep, keep) ->
+%%     Name;
+%% update_name(Name, {metric, Metric}, {glob, Glob}) ->
+%%     MList = dproto:metric_to_list(Metric),
+%%     GStr = dql:unparse_metric(Glob),
+%%     MStr = dql:unparse_metric(MList),
+%%     binary:replace(Name, GStr, MStr);
 
-update_name(Name, {get, {Bucket, Metric}}, Lookup = {lookup, _}) ->
-    MList = dproto:metric_to_list(Metric),
-    LStr = dql:unparse(Lookup),
-    GStr = dql:unparse({get, {Bucket, MList}}),
-    binary:replace(Name, LStr, GStr).
+%% update_name(Name, {get, {Bucket, Metric}}, Lookup = {lookup, _}) ->
+%%     MList = dproto:metric_to_list(Metric),
+%%     LStr = dql:unparse(Lookup),
+%%     GStr = dql:unparse({get, {Bucket, MList}}),
+%%     binary:replace(Name, LStr, GStr).
 
-name_parts([Q | R], Acc, Buckets) ->
+add_collect([Q | R], Acc, Buckets) ->
     case name(Q, Buckets) of
-        {ok, {Name, Translated}} ->
-            Q1 = {dqe_name, [Name, Translated]},
-            name_parts(R, [Q1 | Acc], Buckets);
+        {ok, {Name, Resolution, Translated}} ->
+            Q1 = {dqe_collect, [Name, Resolution, Translated]},
+            add_collect(R, [Q1 | Acc], Buckets);
         E ->
+            io:format("E: ~p~n", [E]),
             E
     end;
 
-name_parts([], Acc, _Buckets) ->
+add_collect([], Acc, _Buckets) ->
     {ok, lists:reverse(Acc)}.
 
 
@@ -279,35 +286,58 @@ name_parts([], Acc, _Buckets) ->
 %%--------------------------------------------------------------------
 
 
-translate({calc, [], {get, {Bucket, Metric}}}, _Buckets) ->
-    {ok, {dqe_get, [Bucket, Metric]}};
+translate({calc, [], G}, Buckets) ->
+    translate(G, Buckets);
+
+translate(#{op := get, resolution := R, args := Args}, _Buckets) ->
+    {ok, R, {dqe_get, Args}};
 
 %% TODO we can do this better!
-translate({calc, Aggrs, G}, Buckets) ->
-    FoldFn = fun({histogram, HTV, SF, T}, Acc) ->
-                     {histogram, HTV, SF, Acc, T};
-                ({Type, Fun}, Acc) ->
-                     {Type, Fun, Acc};
-                ({Type, Fun, Arg1}, Acc) ->
-                     {Type, Fun, Acc, Arg1};
-                ({Type, Fun, Arg1, Arg2}, Acc) ->
-                     {Type, Fun, Acc, Arg1, Arg2}
+translate({calc, [#{resolution := R} | _] = Aggrs, G}, Buckets) ->
+    %% FoldFn = fun({histogram, HTV, SF, T}, Acc) ->
+    %%                  {histogram, HTV, SF, Acc, T};
+    %%             ({Type, Fun}, Acc) ->
+    %%                  {Type, Fun, Acc};
+    %%             ({Type, Fun, Arg1}, Acc) ->
+    %%                  {Type, Fun, Acc, Arg1};
+    %%             ({Type, Fun, Arg1, Arg2}, Acc) ->
+    %%                  {Type, Fun, Acc, Arg1, Arg2}
+    %%          end,
+    %% Recursive = lists:foldl(FoldFn, G, Aggrs),
+    %% translate(Recursive, Buckets);
+    FoldFn = fun(#{op := fcall,
+                   args := #{
+                     mod := Mod,
+                     state := State
+                    }}, Acc) ->
+                     {dqe_fun_flow, [Mod, State, Acc]}
              end,
-    Recursive = lists:foldl(FoldFn, G, Aggrs),
-    translate(Recursive, Buckets);
+    {ok, _R, G1} = translate(G, Buckets),
+    {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 
-translate({combine, Fun, Parts}, Buckets) ->
-    Parts1 = [translate(P, Buckets) || P <- Parts],
-    Parts2 = [P || {ok, P} <- Parts1],
-    Parts3 = keep_optimizing_sum(Parts2),
-    %% TODO: this is a hack we need to fix the optimisation!
-    Parts4 = lists:flatten(Parts3),
-    case Fun of
-        sum ->
-            {ok, {dqe_sum, [Parts4]}};
-        avg ->
-            {ok, {dqe_math, [divide, {dqe_sum, [Parts4]}, length(Parts)]}}
-    end;
+translate({combine,
+           #{resolution := R, args := #{mod := Mod, state := State}},
+           Parts},
+          Buckets) ->
+    Parts1 = [begin
+                  {ok, _, P1} = translate(Part, Buckets),
+                  P1
+              end|| Part <- Parts],
+    {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}};
+
+%% translate({combine, Fun, Parts}, Buckets) ->
+%%     Parts1 = [translate(P, Buckets) || P <- Parts],
+%%     Parts2 = [P || {ok, P} <- Parts1],
+%%     Parts3 = keep_optimizing_sum(Parts2),
+%%     %% TODO: this is a hack we need to fix the optimisation!
+%%     Parts4 = lists:flatten(Parts3),
+%%     case Fun of
+%%         sum ->
+%%             {ok, {dqe_sum, [Parts4]}};
+%%         avg ->
+%%             {ok, {dqe_math, [divide, {dqe_sum, [Parts4]}, length(Parts)]}}
+%%     end;
+
 
 %%--------------------------------------------------------------------
 %% One value aggregates
@@ -434,29 +464,29 @@ translate({get, {Bucket, Metric}}, _Buckets) when is_binary(Metric) ->
 
 name({named, N, Q}, Buckets) ->
     case translate(Q, Buckets) of
-        {ok, Q1} ->
-            {ok, {N, Q1}};
+        {ok, R, Q1} ->
+            {ok, {N, R, Q1}};
         E ->
             E
     end.
 
-keep_optimizing_sum([_, _, _, _, _ | _] = Gets) ->
-    keep_optimizing_sum(optimize_sum(Gets));
-keep_optimizing_sum(Gets) ->
-    Gets.
+%% keep_optimizing_sum([_, _, _, _, _ | _] = Gets) ->
+%%     keep_optimizing_sum(optimize_sum(Gets));
+%% keep_optimizing_sum(Gets) ->
+%%     Gets.
 
-optimize_sum([G1, G2, G3, G4]) ->
-    [{dqe_sum, [[G1, G2, G3, G4]]}];
+%% optimize_sum([G1, G2, G3, G4]) ->
+%%     [{dqe_sum, [[G1, G2, G3, G4]]}];
 
-optimize_sum([G1, G2, G3, G4 | GRest]) ->
-    [{dqe_sum, [[G1, G2, G3, G4]]} | optimize_sum(GRest)];
+%% optimize_sum([G1, G2, G3, G4 | GRest]) ->
+%%     [{dqe_sum, [[G1, G2, G3, G4]]} | optimize_sum(GRest)];
 
 
-optimize_sum([Get]) ->
-    [Get];
+%% optimize_sum([Get]) ->
+%%     [Get];
 
-optimize_sum(Gets) ->
-    [{dqe_sum, [Gets]}].
+%% optimize_sum(Gets) ->
+%%     [{dqe_sum, [Gets]}].
 
 
 glob_match(G, Ms) ->

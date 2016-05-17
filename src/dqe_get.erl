@@ -6,46 +6,51 @@
 
 -record(state, {
           bucket :: binary(),
-          metric :: binary(),
+          key :: binary(),
+          start :: non_neg_integer(),
+          count :: pos_integer(),
           chunk :: pos_integer()
          }).
 
-init([Bucket, Metric]) when is_binary(Metric) ->
+init([Start, Count, Resolution, Bucket, Key]) when is_binary(Key) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
-    init([Bucket, Metric, Chunk]);
+    init([Start, Count, Resolution, Bucket, Key, Chunk]);
 
-init([Bucket, Metric, Chunk]) ->
-    {ok, #state{bucket = Bucket, metric = Metric, chunk = Chunk}, []}.
+init([Start, Count, _Resolution, Bucket, Key, Chunk]) ->
+    {ok, #state{start = Start, count = Count, bucket = Bucket, key = Key, chunk = Chunk}, []}.
 
-describe(#state{bucket = Bucket, metric = Metric}) ->
-    [Bucket, "/", Metric].
+describe(#state{bucket = Bucket, key = Key}) ->
+    [Bucket, "/", Key].
 
-start({_Start, 0}, State) ->
+start(run, State = #state{count = 0}) ->
     {done, State};
 
-start({Start, Count},
-      State = #state{bucket = Bucket, metric = Metric, chunk = Chunk}) when
+start(run,
+      State = #state{start = Start, count = Count, chunk = Chunk,
+                     bucket = Bucket, key = Key}) when
       Count >= Chunk ->
     %% We do a bit of cheating here this allows us to loop.
-    case ddb_connection:get(Bucket, Metric, Start, Chunk) of
+    State1 = State#state{start = Start + Chunk, count = Count - Chunk},
+    case ddb_connection:get(Bucket, Key, Start, Chunk) of
         {error, _Error} ->
             {done, State};
-        {ok, Res, <<>>} ->
-            dflow:start(self(), {Start + Chunk, Count - Chunk}),
-            {emit, {realized, {mmath_bin:empty(Chunk), Res}}, State};
-        {ok, Res, Data} ->
-            dflow:start(self(), {Start + Chunk, Count - Chunk}),
-            {emit, {realized, {mmath_bin:realize(Data), Res}}, State}
+        {ok, _Res, <<>>} ->
+            dflow:start(self(), run),
+            {emit, mmath_bin:realize(mmath_bin:empty(Chunk)), State1};
+        {ok, _Res, Data} ->
+            dflow:start(self(), 1),
+            {emit, mmath_bin:realize(Data), State1}
     end;
 
-start({Start, Count}, State = #state{bucket = Bucket, metric = Metric}) ->
-    case ddb_connection:get(Bucket, Metric, Start, Count) of
+start(run, State = #state{start = Start, count = Count,
+                     bucket = Bucket, key = Key}) ->
+    case ddb_connection:get(Bucket, Key, Start, Count) of
         {error, _Error} ->
             {done, State};
-        {ok, Res, <<>>} ->
-            {done, {realized, {mmath_bin:empty(Count), Res}}, State};
-        {ok, Res, Data} ->
-            {done, {realized, {mmath_bin:realize(Data), Res}}, State}
+        {ok, _Res, <<>>} ->
+            {done, mmath_bin:realize(mmath_bin:empty(Count)), State};
+        {ok, _Res, Data} ->
+            {done, mmath_bin:realize(Data), State}
     end.
 
 emit(_Child, _Data, State) ->

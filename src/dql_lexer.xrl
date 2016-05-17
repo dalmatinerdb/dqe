@@ -14,22 +14,15 @@ DATE    = "([^"]|\.)+"
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
 WS      = ([\000-\s]|%.*)
-%% MM      = (min|max)
-%% AVG     = (avg)
-%% HFUN    = (mean|median|stddev)
-%% CAGGR   = (sum)
-%% MATH    = (divide|multiply)
-%% HIST    = (histogram)
-%% PERC    = (percentile)
 TIME    = (ms|s|m|h|d|w)
 SELECT  = [Ss][Ee][Ll][Ee][Cc][Tt]
 BUCKET  = [Bb][Uu][Cc][Kk][Ee][Tt]
 LAST    = [Ll][Aa][Ss][Tt]
 AS      = [Aa][Ss]
 FROM    = [Ff][Rr][Oo][Mm]
+ALIAS   = [Aa][Ll][Ii][Aa][Ss]
 LIKE    = [Ll][Ii][Kk][Ee]
 BETWEEN = [Bb][Ee][Tt][Ww][Ee][Ee][Nn]
-IN      = [Ii][Nn]
 NOW     = [Nn][Oo][Ww]
 AGO     = [Aa][Gg][Oo]
 AND     = [Aa][Nn][Dd]
@@ -46,8 +39,8 @@ Rules.
 {BUCKET}    :   {token, {kw_bucket,     TokenLine}}.
 {LAST}      :   {token, {kw_last,       TokenLine}}.
 {AS}        :   {token, {kw_as,         TokenLine}}.
-{IN}        :   {token, {kw_in,         TokenLine}}.
 {FROM}      :   {token, {kw_from,       TokenLine}}.
+{ALIAS}     :   {token, {kw_alias,      TokenLine}}.
 {BETWEEN}   :   {token, {kw_between,    TokenLine}}.
 {LIKE}      :   {token, {kw_like,       TokenLine}}.
 {NOW}       :   {token, {kw_now,        TokenLine}}.
