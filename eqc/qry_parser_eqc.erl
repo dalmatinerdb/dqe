@@ -56,6 +56,10 @@ comb_fun() ->
     oneof([sum, avg]).
 aggr_fun() ->
     oneof([sum, min, max, avg]).
+trans_fun1() ->
+    oneof([derivate, confidence]).
+trans_fun2() ->
+    oneof([multiply, divide]).
 
 percentile() ->
     ?SUCHTHAT(N, real(), N > 0 andalso N =< 1).
@@ -70,10 +74,9 @@ aggr_tree(Size) ->
        oneof(
          [
           {combine, comb_fun(), [Q]},
-          {aggr, derivate, Q},
           {aggr, aggr_fun(), Q, aggr_range()},
-          {math, multiply, Q, pos_int()},
-          {math, divide, Q, pos_int()}
+          {trans, trans_fun1(), Q},
+          {trans, trans_fun2(), Q, pos_int()}
          ])).
 
 significant_figures() ->

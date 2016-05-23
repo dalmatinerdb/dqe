@@ -20,16 +20,20 @@
 -type range() :: {between, relative_time(), relative_time()} |
                  {last, time()}.
 
--type comb_fun() :: avg | min | max | sum.
--type aggr_fun1() :: derivate.
+-type trans_fun1() :: derivate | confidence.
+-type trans_fun2() :: multiply | divide.
 -type aggr_fun2() :: avg | sum | min | max.
+-type comb_fun() :: avg | min | max | sum.
 
 -type get_stmt() ::
         {get, bm()} |
         {sget, gbm()}.
 
+-type trans_stmt() ::
+        {aggr, trans_fun1(), statement()} |
+        {aggr, trans_fun2(), statement(), integer()}.
+
 -type aggr_stmt() ::
-        {aggr, aggr_fun1(), statement()} |
         {aggr, aggr_fun2(), statement(), time()}.
 
 -type cmb_stmt() ::
@@ -37,18 +41,23 @@
 
 -type statement() ::
         get_stmt() |
+        trans_stmt() |
         aggr_stmt() |
         cmb_stmt().
 
+-type flat_trans_fun() ::
+        {trans, trans_fun1()} |
+        {trans, trans_fun2(), integer()}.
+
 -type flat_aggr_fun() ::
-        {aggr, aggr_fun2(), time()} |
-        {aggr, aggr_fun1()}.
+        {aggr, aggr_fun2(), time()}.
 
 -type flat_terminal() ::
         {combine, comb_fun(), [flat_stmt()]}.
 
 -type flat_stmt() ::
         flat_terminal() |
+        {calc, [flat_trans_fun()], flat_terminal() | get_stmt()} |
         {calc, [flat_aggr_fun()], flat_terminal() | get_stmt()}.
 
 -type parser_error() ::
@@ -95,6 +104,9 @@ flatten({get, _} = Get, Chain) ->
 flatten({lookup, _} = Lookup, Chain) ->
     {calc, Chain, Lookup};
 
+flatten({var, _} = Var, Chain) ->
+    {calc, Chain, Var};
+
 flatten({combine, Aggr, Children}, []) ->
     Children1 = [flatten(C, []) || C <- Children],
     {combine, Aggr, Children1};
@@ -115,12 +127,11 @@ flatten({histogram, HighestTrackableValue,
     flatten(Child, [{histogram, HighestTrackableValue,
                      SignificantFigures, Time} | Chain]);
 
-flatten({math, Fun, Child, Val}, Chain) ->
-    flatten(Child, [{math, Fun, Val} | Chain]);
+flatten({trans, Fun, Child}, Chain) ->
+    flatten(Child, [{trans, Fun} | Chain]);
 
-flatten({aggr, Aggr, Child}, Chain) ->
-    flatten(Child, [{aggr, Aggr} | Chain]);
-
+flatten({trans, Fun, Child, Val}, Chain) ->
+    flatten(Child, [{trans, Fun, Val} | Chain]);
 
 flatten({aggr, Aggr, Child, Time}, Chain) ->
     flatten(Child, [{aggr, Aggr, Time} | Chain]).
@@ -208,9 +219,13 @@ preprocess_qry({aggr, AggF, Q, Arg, T}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
     {{aggr, AggF, Q1, Arg, T}, A1, M1};
 
-preprocess_qry({math, MathF, Q, V}, Aliases, Metrics, Rms) ->
+preprocess_qry({trans, TransF, Q}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
-    {{math, MathF, Q1, V}, A1, M1};
+    {{trans, TransF, Q1}, A1, M1};
+
+preprocess_qry({trans, TransF, Q, Arg}, Aliases, Metrics, Rms) ->
+    {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
+    {{trans, TransF, Q1, Arg}, A1, M1};
 
 preprocess_qry({hfun, HFun, Q}, Aliases, Metrics, Rms) ->
     {Q1, A1, M1} = preprocess_qry(Q, Aliases, Metrics, Rms),
@@ -404,15 +419,11 @@ unparse({aggr, Fun, Q, A, T}) ->
     As = unparse(A),
     Ts = unparse(T),
     <<Funs/binary, "(", Qs/binary, ", ", As/binary, ", ", Ts/binary, ")">>;
-unparse({math, multiply, Q, V}) ->
+unparse({trans, Fun, Q}) ->
+    Funs = list_to_binary(atom_to_list(Fun)),
     Qs = unparse(Q),
-    Vs = unparse(V),
-    <<Qs/binary, " * ", Vs/binary>>;
-unparse({math, divide, Q, V}) ->
-    Qs = unparse(Q),
-    Vs = unparse(V),
-    <<Qs/binary, " / ", Vs/binary>>;
-unparse({math, Fun, Q, V}) ->
+    <<Funs/binary, "(", Qs/binary, ")">>;
+unparse({trans, Fun, Q, V}) ->
     Funs = list_to_binary(atom_to_list(Fun)),
     Qs = unparse(Q),
     Vs = unparse(V),
