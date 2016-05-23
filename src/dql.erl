@@ -373,10 +373,10 @@ lexer_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
                                          [Line, E]))}.
 
+%% Start here
 prepare(S) ->
     case parse(S) of
-        {ok, {select, Qs, Aliases, T}} ->
-            dqe:pdebug('parse', "Query parsed: ~s", [S]),
+        {ok, {select, Qs, Aliases, T}} ->            dqe:pdebug('parse', "Query parsed: ~s", [S]),
             extract_aliases(Qs, T, Aliases);
         E ->
             E
@@ -393,6 +393,7 @@ extract_aliases(Qs, T, Aliases) ->
 
 
 preprocess(Qs, T, Aliases, Metrics) ->
+    io:format("~p~n", [Qs]),
     {QQ, _AliasesQ, MetricsQ} =
         lists:foldl(fun(Q, {QAcc, AAcc, MAcc}) ->
                             {Q1, A1, M1} = preprocess_qry(Q, AAcc, MAcc),
@@ -437,6 +438,7 @@ propagate_resolutions(Qs, Metrics) ->
 expand(Q = #{op := named, args := [N, S]}) ->
     [Q#{args => [N, S1]} || S1 <- expand(S)];
 expand({calc, Fs, Q}) ->
+    io:format("~p~n", [Q]),
     [{calc, Fs, Q1} || Q1 <- expand(Q)];
 expand({combine, F, Qs}) ->
     [{combine, F, lists:flatten([expand(Q) || Q <- Qs])}];
