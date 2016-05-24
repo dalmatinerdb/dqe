@@ -4,9 +4,9 @@
    │  └─ poolboy─1.5.1
    ├─ dflow─0.1.5
    ├─ dproto─0.1.14
-   ├─ dqe_idx─0.1.15
-   ├─ dqe_idx_ddb─0.1.10
-   ├─ dqe_idx_pg─0.1.25
+   ├─ dqe_idx─0.1.17
+   ├─ dqe_idx_ddb─0.1.11
+   ├─ dqe_idx_pg─0.1.27
    │  └─ pgapp─0.0.1
    │     └─ epgsql─3.1.1
    ├─ hdr_histogram─0.2.0
