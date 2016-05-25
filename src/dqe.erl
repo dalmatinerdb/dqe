@@ -21,6 +21,7 @@
                         'resolution_conflict' |
                         'timeout' |
                         binary() |
+                        {not_found, binary(), [atom()]} |
                         {'not_found',{binary(), binary()}}}.
 
 %%%===================================================================
@@ -29,7 +30,6 @@
 
 %%--------------------------------------------------------------------
 %% @doc Initializes the query engine by loading the internal functions
-%%
 %% @end
 %%--------------------------------------------------------------------
 
@@ -49,7 +49,6 @@ init() ->
 
 %%--------------------------------------------------------------------
 %% @doc Translates an error into a readable string.
-%%
 %% @end
 %%--------------------------------------------------------------------
 
@@ -75,9 +74,6 @@ error_string({error, B}) when is_binary(B) ->
 %%--------------------------------------------------------------------
 %% @doc Same as {@link run/2} with the timeout set to <em>infinity</em>
 %%
-%% @spec run(Query :: string()) ->
-%%           {error, timeout} |
-%%           {ok, query_reply()}
 %% @end
 %%--------------------------------------------------------------------
 
@@ -93,9 +89,6 @@ run(Query) ->
 %% This call includes all optimisations made by dflow, as well as some
 %% query planning done in the {@link prepare/1} function.
 %%
-%% @spec run(Query :: string()) ->
-%%           {error, timeout} |
-%%           {ok, query_reply()}
 %% @end
 %%--------------------------------------------------------------------
 
@@ -150,10 +143,6 @@ run(Query, Timeout) ->
 %% @doc Prepares query exeuction, this can be used of the query is
 %% desired to be executed asyncrounously instead of using {@link run/2}
 %%
-%% @spec prepare(Query :: string()) ->
-%%                      {DFlows :: [dflow:step()],
-%%                       Start :: pos_integer(),
-%%                       Count :: pos_integer()}.
 %% @end
 %%--------------------------------------------------------------------
 
@@ -169,7 +158,7 @@ prepare(Query) ->
             dqe_lib:pdebug('prepare', "Parsing done.", []),
             {Total, Unique} = count_parts(Parts),
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
-                   [Total, Unique]),
+                           [Total, Unique]),
             {ok, Parts1} = add_collect(Parts, []),
             dqe_lib:pdebug('prepare', "Naing applied.", []),
             {ok, {Total, Unique, Parts1}};
@@ -235,7 +224,7 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec translate(DQLTerm :: dql:query_part() | dql:dqe_fun()) ->
-                      {ok, pos_integer(), dflow:step()}.
+                       {ok, pos_integer(), dflow:step()}.
 translate({calc, [], G}) ->
     translate_g(G);
 
@@ -258,8 +247,8 @@ translate_g(#{op := get, resolution := R, args := Args}) ->
     {ok, R, {dqe_get, Args}};
 
 translate_g({combine,
-           #{resolution := R, args := #{mod := Mod, state := State}},
-           Parts}) ->
+             #{resolution := R, args := #{mod := Mod, state := State}},
+             Parts}) ->
     Parts1 = [begin
                   {ok, _, P1} = translate(Part),
                   P1

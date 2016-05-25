@@ -230,7 +230,7 @@ glob_element(Size) ->
 prop_qery_parse_unparse() ->
     ?FORALL(T, qry_tree(),
             begin
-                Unparsed = ?P:unparse(T),
+                Unparsed = dql_unparse:unparse(T),
                 case ?P:parse(Unparsed) of
                     {ok, ReParsed} ->
                         ?WHENFAIL(
@@ -248,7 +248,7 @@ prop_prepare() ->
     ?SETUP(fun mock/0,
            ?FORALL(T, qry_tree(),
                    begin
-                       Unparsed = ?P:unparse(T),
+                       Unparsed = dql_unparse:unparse(T),
                        case ?P:prepare(Unparsed) of
                            {ok, _} ->
                                true;
@@ -263,7 +263,7 @@ prop_dflow_prepare() ->
     ?SETUP(fun mock/0,
            ?FORALL(T, qry_tree(),
                    begin
-                       Unparsed = ?P:unparse(T),
+                       Unparsed = dql_unparse:unparse(T),
                        case dqe:prepare(Unparsed) of
                            {ok, _} ->
                                true;

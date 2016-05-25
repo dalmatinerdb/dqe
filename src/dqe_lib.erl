@@ -17,6 +17,7 @@ pstart() ->
             put(start, N),
             N
     end.
+
 glob_to_string(G) ->
     G1 = [case E of
               '*' ->
