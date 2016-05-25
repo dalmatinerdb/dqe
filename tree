@@ -5,15 +5,15 @@
    ├─ dflow─0.1.5
    ├─ dproto─0.1.14
    ├─ dqe_fun─0.1.0
-   ├─ dqe_idx─0.1.14
-   ├─ dqe_idx_ddb─0.1.10
-   ├─ dqe_idx_pg─0.1.20
+   ├─ dqe_idx─0.1.17
+   ├─ dqe_idx_ddb─0.1.11
+   ├─ dqe_idx_pg─0.1.27
    │  └─ pgapp─0.0.1
    │     └─ epgsql─3.1.1
    ├─ hdr_histogram─0.2.0
    ├─ lager─2.1.1
-   │  └─ goldrush─0.1.7
-   ├─ mmath─0.2.0-alpha4
+   │  └─ goldrush─0.1.8
+   ├─ mmath─0.2.0-alpha6
    └─ qdate─0.4.3
       ├─ erlang_localtime─1.0.0
       └─ erlware_commons─0.20.0

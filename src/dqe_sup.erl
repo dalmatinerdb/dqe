@@ -62,7 +62,7 @@ init([]) ->
 
     %% AChild = {'AName', {'AModule', start_link, []},
     %%           Restart, Shutdown, Type, ['AModule']},
-    dqe:init(),
+    _ = dqe:init(),
     {ok, {SupFlags, []}}.
 
 %%%===================================================================

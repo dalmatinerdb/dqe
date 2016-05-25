@@ -183,13 +183,13 @@ tag() ->
        {1,  {tag, <<>>, non_empty_binary()}}]).
 
 where_clause(S) when S =< 1 ->
-    #{op => '=', args => [tag(), non_empty_binary()]};
+    {'=', tag(), non_empty_binary()};
 where_clause(S) ->
     ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
 
 where_clause_choice(N, S) ->
-    oneof([#{op => 'and', args => [where_clause(N), where_clause(S - N)]},
-           #{op =>'or',   args => [where_clause(N), where_clause(S - N)]}]).
+    oneof([{'and', where_clause(N), where_clause(S - N)},
+           {'or', where_clause(N), where_clause(S - N)}]).
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),

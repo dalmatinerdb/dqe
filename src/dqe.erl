@@ -23,6 +23,7 @@
                          Resolution :: pos_integer()}].
 
 -type query_error() :: {'error', 'no_results' |
+                        'significant_figures' |
                         'timeout' |
                         binary() |
                         {'not_found',{binary(), binary()}}}.
@@ -76,8 +77,8 @@ init() ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string()) ->
-                 query_error() |
-                 {ok, Start::pos_integer(), query_reply()}.
+                 {'ok', pos_integer(), query_reply()} |
+                 query_error().
 run(Query) ->
     run(Query, infinity).
 
@@ -127,7 +128,7 @@ run(Query, Timeout) ->
                 {ok, [Result]} ->
                     pdebug('query', "Query complete.", []),
                     %% Result1 = [Element || {points, Element} <- Result],
-                    Start = -423, %%TODO: this isn't correct any more!
+                    Start = 423, %%@TODO: this isn't correct any more!
                     {ok, Start, Result};
                 {ok, []} ->
                     pdebug('query', "Query has no results.", []),

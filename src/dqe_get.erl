@@ -8,7 +8,7 @@
           bucket :: binary(),
           key :: binary(),
           start :: non_neg_integer(),
-          count :: pos_integer(),
+          count :: non_neg_integer(),
           chunk :: pos_integer()
          }).
 

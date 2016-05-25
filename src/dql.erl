@@ -4,53 +4,47 @@
          unparse_where/1, resolve_functions/1]).
 
 
--type bm() :: {binary(), [binary()]}.
-
--type gbm() :: {binary(), [binary() | '*']}.
-
--type time() :: {time, pos_integer(), ms | s | m | h | d | w} | pos_integer().
-
--type resolution() :: time().
+-type time() :: #{ op => time, args => [pos_integer() | ms | s | m | h | d | w]} | pos_integer().
 
 -type relative_time() :: time() |
                          now |
-                         {'after' | before, pos_integer(), time()} |
-                         {ago, time()}.
+                         #{ op => 'after' | before, args => [pos_integer() | time()]} |
+                         #{op => ago, ags => [time()]}.
 
 
--type range() :: {between, relative_time(), relative_time()} |
-                 {last, time()}.
+-type range() :: #{ op => between, args => [relative_time() | relative_time()]} |
+                 #{ op => last, args => [time()]}.
 
--type comb_fun() :: avg | min | max | sum.
--type aggr_fun1() :: derivate.
--type aggr_fun2() :: avg | sum | min | max.
+-type sig_element() :: string | number | metric.
+
+-type dqe_fun() ::
+        #{
+           op => fcall,
+           signature => [sig_element()],
+           args => #{}
+         }.
 
 -type get_stmt() ::
-        {get, bm()} |
-        {sget, gbm()}.
+        #{op => get, args => [[binary()] | non_neg_integer()]} |
+        #{op => sget, args => [[binary() | '*'] | non_neg_integer()]}.
 
--type aggr_stmt() ::
-        {aggr, aggr_fun1(), statement()} |
-        {aggr, aggr_fun2(), statement(), time()}.
 
 -type cmb_stmt() ::
-        {combine, comb_fun(), [statement()]}.
+        {combine, dqe_fun(), [statement()]}.
+
+
 
 -type statement() ::
         get_stmt() |
-        aggr_stmt() |
+        dqe_fun() |
         cmb_stmt().
 
--type flat_aggr_fun() ::
-        {aggr, aggr_fun2(), time()} |
-        {aggr, aggr_fun1()}.
-
 -type flat_terminal() ::
-        {combine, comb_fun(), [flat_stmt()]}.
+        {combine, dqe_fun(), [flat_stmt()]}.
 
 -type flat_stmt() ::
-        flat_terminal() |
-        {calc, [flat_aggr_fun()], flat_terminal() | get_stmt()}.
+%%        flat_terminal() |
+        {calc, [dqe_fun()], flat_terminal() | get_stmt()}.
 
 -type parser_error() ::
         {error, binary()}.
@@ -146,8 +140,7 @@ bucket_resolution(O = #{args := A = [_Bucket, _]}, BucketResolutions) ->
 
 -spec parse(string() | binary()) ->
                    parser_error() |
-                   {ok, {select, [statement()], range(), resolution()}} |
-                   {ok, {select, [statement()], [alias()], range(), resolution()}}.
+                   {ok, {select, [statement()], [alias()], range()}}.
 
 parse(S) when is_binary(S)->
     parse(binary_to_list(S));
@@ -231,6 +224,9 @@ get_resolution({calc, [], Get}) ->
 
 get_resolution({calc, Chain, _}) ->
     #{resolution := Rms} = lists:last(Chain),
+    {ok, Rms};
+
+get_resolution({combine, #{resolution := Rms}, _Elements}) ->
     {ok, Rms}.
 
 apply_times(#{op := named, args := [N, C]}) ->
@@ -286,9 +282,9 @@ flatten(Child = #{return := R}) ->
        args => [N, C],
        signature => [string, R],
        return => R
-    }.
+     }.
 
--spec flatten(statement(), [flat_aggr_fun()]) ->
+-spec flatten(statement(), [dqe_fun()]) ->
                      flat_stmt().
 
 flatten(F = #{op   := fcall,
@@ -315,50 +311,50 @@ flatten(Get = #{op := lookup},
 
 flatten(Get = #{op := sget},
         Chain) ->
-    {calc, Chain, Get};
+    {calc, Chain, Get}.
 
-flatten(Op, Chain) ->
-    io:format("flatten_old: ~p~n", [Op]),
-    flatten_old(Op, Chain).
+%% flatten(Op, Chain) ->
+%%     io:format("flatten_old: ~p~n", [Op]),
+%%     flatten_old(Op, Chain).
 
-flatten_old({sget, _} = Get, Chain) ->
-    {calc, Chain, Get};
+%% flatten_old({sget, _} = Get, Chain) ->
+%%     {calc, Chain, Get};
 
-flatten_old({get, _} = Get, Chain) ->
-    {calc, Chain, Get};
+%% flatten_old({get, _} = Get, Chain) ->
+%%     {calc, Chain, Get};
 
-flatten_old({lookup, _} = Lookup, Chain) ->
-    {calc, Chain, Lookup};
+%% flatten_old({lookup, _} = Lookup, Chain) ->
+%%     {calc, Chain, Lookup};
 
-flatten_old({combine, Aggr, Children}, []) ->
-    Children1 = [flatten_old(C, []) || C <- Children],
-    {combine, Aggr, Children1};
+%% flatten_old({combine, Aggr, Children}, []) ->
+%%     Children1 = [flatten_old(C, []) || C <- Children],
+%%     {combine, Aggr, Children1};
 
-flatten_old({combine, Aggr, Children}, Chain) ->
-    Children1 = [flatten_old(C, []) || C <- Children],
-    {calc, Chain, {combine, Aggr, Children1}};
-
-
-flatten_old({hfun, Fun, Child, Val}, Chain) ->
-    flatten_old(Child, [{hfun, Fun, Val} | Chain]);
-
-flatten_old({hfun, Fun, Child}, Chain) ->
-    flatten_old(Child, [{hfun, Fun} | Chain]);
-
-flatten_old({histogram, HighestTrackableValue,
-         SignificantFigures, Child, Time}, Chain) ->
-    flatten_old(Child, [{histogram, HighestTrackableValue,
-                     SignificantFigures, Time} | Chain]);
-
-flatten_old({math, Fun, Child, Val}, Chain) ->
-    flatten_old(Child, [{math, Fun, Val} | Chain]);
-
-flatten_old({aggr, Aggr, Child}, Chain) ->
-    flatten_old(Child, [{aggr, Aggr} | Chain]);
+%% flatten_old({combine, Aggr, Children}, Chain) ->
+%%     Children1 = [flatten_old(C, []) || C <- Children],
+%%     {calc, Chain, {combine, Aggr, Children1}};
 
 
-flatten_old({aggr, Aggr, Child, Time}, Chain) ->
-    flatten_old(Child, [{aggr, Aggr, Time} | Chain]).
+%% flatten_old({hfun, Fun, Child, Val}, Chain) ->
+%%     flatten_old(Child, [{hfun, Fun, Val} | Chain]);
+
+%% flatten_old({hfun, Fun, Child}, Chain) ->
+%%     flatten_old(Child, [{hfun, Fun} | Chain]);
+
+%% flatten_old({histogram, HighestTrackableValue,
+%%              SignificantFigures, Child, Time}, Chain) ->
+%%     flatten_old(Child, [{histogram, HighestTrackableValue,
+%%                          SignificantFigures, Time} | Chain]);
+
+%% flatten_old({math, Fun, Child, Val}, Chain) ->
+%%     flatten_old(Child, [{math, Fun, Val} | Chain]);
+
+%% flatten_old({aggr, Aggr, Child}, Chain) ->
+%%     flatten_old(Child, [{aggr, Aggr} | Chain]);
+
+
+%% flatten_old({aggr, Aggr, Child, Time}, Chain) ->
+%%     flatten_old(Child, [{aggr, Aggr, Time} | Chain]).
 
 
 parser_error(Line, E)  ->
@@ -376,7 +372,8 @@ lexer_error(Line, E)  ->
 %% Start here
 prepare(S) ->
     case parse(S) of
-        {ok, {select, Qs, Aliases, T}} ->            dqe:pdebug('parse', "Query parsed: ~s", [S]),
+        {ok, {select, Qs, Aliases, T}} ->
+            dqe:pdebug('parse', "Query parsed: ~s", [S]),
             extract_aliases(Qs, T, Aliases);
         E ->
             E
@@ -393,7 +390,6 @@ extract_aliases(Qs, T, Aliases) ->
 
 
 preprocess(Qs, T, Aliases, Metrics) ->
-    io:format("~p~n", [Qs]),
     {QQ, _AliasesQ, MetricsQ} =
         lists:foldl(fun(Q, {QAcc, AAcc, MAcc}) ->
                             {Q1, A1, M1} = preprocess_qry(Q, AAcc, MAcc),
@@ -417,16 +413,15 @@ flatten(Qs, T, Metrics) ->
     expand(Qs1, T, Metrics).
 
 expand(Qs, T, Metrics) ->
-    %%io:format("Qs:~p~n", [Qs]),
     Qs1 = [expand(Q) || Q <- Qs],
     Qs2 = lists:flatten(Qs1),
     get_resolution(Qs2, T, Metrics).
 
 get_resolution(Qs, T, Metrics) ->
     {Qs1, _} = lists:foldl(fun (Q, {QAcc, RAcc}) ->
-                                  {ok, Q1, RAcc1} = get_times(Q, T, RAcc),
-                                  {[Q1 | QAcc], RAcc1}
-                          end, {[], gb_trees:empty()}, Qs),
+                                   {ok, Q1, RAcc1} = get_times(Q, T, RAcc),
+                                   {[Q1 | QAcc], RAcc1}
+                           end, {[], gb_trees:empty()}, Qs),
     Qs2 = lists:reverse(Qs1),
     propagate_resolutions(Qs2, Metrics).
 
@@ -438,7 +433,6 @@ propagate_resolutions(Qs, Metrics) ->
 expand(Q = #{op := named, args := [N, S]}) ->
     [Q#{args => [N, S1]} || S1 <- expand(S)];
 expand({calc, Fs, Q}) ->
-    io:format("~p~n", [Q]),
     [{calc, Fs, Q1} || Q1 <- expand(Q)];
 expand({combine, F, Qs}) ->
     [{combine, F, lists:flatten([expand(Q) || Q <- Qs])}];
@@ -547,89 +541,89 @@ preprocess_qry(O = #{op := time}, A, M) ->
     {O, A, M};
 
 preprocess_qry(N, A, M) when is_number(N)->
-    {N, A, M};
+    {N, A, M}.
 
-preprocess_qry(Q, A, M) ->
-    io:format("preprocess_qry_old: ~p~n", [Q]),
-    preprocess_qry_old(Q, A, M, 1000).
+%% preprocess_qry(Q, A, M) ->
+%%     io:format("preprocess_qry_old: ~p~n", [Q]),
+%%     preprocess_qry_old(Q, A, M, 1000).
 
-preprocess_qry_old({named, N, Q}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{named, N, Q1}, A1, M1};
+%% preprocess_qry_old({named, N, Q}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{named, N, Q1}, A1, M1};
 
-preprocess_qry_old({aggr, AggF, Q}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{aggr, AggF, Q1}, A1, M1};
+%% preprocess_qry_old({aggr, AggF, Q}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{aggr, AggF, Q1}, A1, M1};
 
-preprocess_qry_old({aggr, AggF, Q, T}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{aggr, AggF, Q1, T}, A1, M1};
+%% preprocess_qry_old({aggr, AggF, Q, T}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{aggr, AggF, Q1, T}, A1, M1};
 
-preprocess_qry_old({aggr, AggF, Q, Arg, T}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{aggr, AggF, Q1, Arg, T}, A1, M1};
+%% preprocess_qry_old({aggr, AggF, Q, Arg, T}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{aggr, AggF, Q1, Arg, T}, A1, M1};
 
-preprocess_qry_old({math, MathF, Q, V}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{math, MathF, Q1, V}, A1, M1};
+%% preprocess_qry_old({math, MathF, Q, V}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{math, MathF, Q1, V}, A1, M1};
 
-preprocess_qry_old({hfun, HFun, Q}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{hfun, HFun, Q1}, A1, M1};
+%% preprocess_qry_old({hfun, HFun, Q}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{hfun, HFun, Q1}, A1, M1};
 
-preprocess_qry_old({hfun, HFun, Q, V}, Aliases, Metrics, Rms) ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{hfun, HFun, Q1, V}, A1, M1};
+%% preprocess_qry_old({hfun, HFun, Q, V}, Aliases, Metrics, Rms) ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{hfun, HFun, Q1, V}, A1, M1};
 
-preprocess_qry_old({histogram, HighestTrackableValue, SignificantFigures,
-                Q, Time}, Aliases, Metrics, Rms)
-  when is_integer(HighestTrackableValue),
-       SignificantFigures >= 1,
-       SignificantFigures =< 5 ->
-    {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
-    {{histogram, HighestTrackableValue, SignificantFigures,
-      Q1, Time}, A1, M1};
+%% preprocess_qry_old({histogram, HighestTrackableValue, SignificantFigures,
+%%                     Q, Time}, Aliases, Metrics, Rms)
+%%   when is_integer(HighestTrackableValue),
+%%        SignificantFigures >= 1,
+%%        SignificantFigures =< 5 ->
+%%     {Q1, A1, M1} = preprocess_qry_old(Q, Aliases, Metrics, Rms),
+%%     {{histogram, HighestTrackableValue, SignificantFigures,
+%%       Q1, Time}, A1, M1};
 
 
-preprocess_qry_old({get, BM}, Aliases, Metrics, _Rms) ->
-    Metrics1 = case gb_trees:lookup(BM, Metrics) of
-                   none ->
-                       gb_trees:insert(BM, {get, 0}, Metrics);
-                   {value, {get, N}} ->
-                       gb_trees:update(BM, {get, N + 1}, Metrics)
-               end,
-    {{get, BM}, Aliases, Metrics1};
+%% preprocess_qry_old({get, BM}, Aliases, Metrics, _Rms) ->
+%%     Metrics1 = case gb_trees:lookup(BM, Metrics) of
+%%                    none ->
+%%                        gb_trees:insert(BM, {get, 0}, Metrics);
+%%                    {value, {get, N}} ->
+%%                        gb_trees:update(BM, {get, N + 1}, Metrics)
+%%                end,
+%%     {{get, BM}, Aliases, Metrics1};
 
-preprocess_qry_old({sget, BM}, Aliases, Metrics, _Rms) ->
-    Metrics1 = case gb_trees:lookup(BM, Metrics) of
-                   none ->
-                       gb_trees:insert(BM, {sget, 0}, Metrics);
-                   {value, {sget, N}} ->
-                       gb_trees:update(BM, {sget, N + 1}, Metrics)
-               end,
-    {{sget, BM}, Aliases, Metrics1};
+%% preprocess_qry_old({sget, BM}, Aliases, Metrics, _Rms) ->
+%%     Metrics1 = case gb_trees:lookup(BM, Metrics) of
+%%                    none ->
+%%                        gb_trees:insert(BM, {sget, 0}, Metrics);
+%%                    {value, {sget, N}} ->
+%%                        gb_trees:update(BM, {sget, N + 1}, Metrics)
+%%                end,
+%%     {{sget, BM}, Aliases, Metrics1};
 
-preprocess_qry_old({var, V}, Aliases, Metrics, _Rms) ->
-    {Metrics1, G} = case gb_trees:lookup(V, Aliases) of
-                        {value, {sget, BM}} ->
-                            case gb_trees:lookup(BM, Metrics) of
-                                none ->
-                                    gb_trees:insert(BM, {sget, 0}, Metrics);
-                                {value, {sget, N}} ->
-                                    gb_trees:update(BM, {sget, N + 1}, Metrics)
-                            end;
-                        {value, {get, BM}} ->
-                            case gb_trees:lookup(BM, Metrics) of
-                                none ->
-                                    gb_trees:insert(BM, {get, 1}, Metrics);
-                                {value, {get, N}} ->
-                                    gb_trees:update(BM, {get, N + 1}, Metrics)
-                            end
-                    end,
-    {G, Aliases, Metrics1};
+%% preprocess_qry_old({var, V}, Aliases, Metrics, _Rms) ->
+%%     {Metrics1, G} = case gb_trees:lookup(V, Aliases) of
+%%                         {value, {sget, BM}} ->
+%%                             case gb_trees:lookup(BM, Metrics) of
+%%                                 none ->
+%%                                     gb_trees:insert(BM, {sget, 0}, Metrics);
+%%                                 {value, {sget, N}} ->
+%%                                     gb_trees:update(BM, {sget, N + 1}, Metrics)
+%%                             end;
+%%                         {value, {get, BM}} ->
+%%                             case gb_trees:lookup(BM, Metrics) of
+%%                                 none ->
+%%                                     gb_trees:insert(BM, {get, 1}, Metrics);
+%%                                 {value, {get, N}} ->
+%%                                     gb_trees:update(BM, {get, N + 1}, Metrics)
+%%                             end
+%%                     end,
+%%     {G, Aliases, Metrics1};
 
-preprocess_qry_old(Q, A, M, _) ->
-    {Q, A, M}.
+%% preprocess_qry_old(Q, A, M, _) ->
+%%     {Q, A, M}.
 
 combine([], Acc) ->
     Acc;
@@ -679,14 +673,14 @@ unparse(L) when is_list(L) ->
 unparse(#{op   := fcall,
           args := #{name      := Name,
                     inputs    := Args}}) ->
-               Qs = unparse(Args),
-               <<Name/binary, "(", Qs/binary, ")">>;
+    Qs = unparse(Args),
+    <<Name/binary, "(", Qs/binary, ")">>;
 
 unparse(#{op   := combine,
           args := #{name      := Name,
                     inputs    := Args}}) ->
-               Qs = unparse(Args),
-               <<Name/binary, "(", Qs/binary, ")">>;
+    Qs = unparse(Args),
+    <<Name/binary, "(", Qs/binary, ")">>;
 
 unparse(#{op := named, args := [N, Q]}) ->
     Qs = unparse(Q),
@@ -708,7 +702,7 @@ unparse({select, Q, [], T}) ->
       (unparse(T))/binary>>;
 
 unparse({select, Q, A, T}) ->
-    <<"SELECT ", (unparse(Q))/binary, " FROM ", (unparse(A))/binary, " ",
+    <<"SELECT ", (unparse(Q))/binary, " ALIAS ", (unparse(A))/binary, " ",
       (unparse(T))/binary>>;
 
 unparse(#{op := last, args := [Q]}) ->
@@ -730,122 +724,122 @@ unparse(N) when is_integer(N)->
     <<(integer_to_binary(N))/binary>>;
 
 unparse(#{op := lookup, args := [B, M]}) ->
-    <<(unparse_metric(M))/binary, " IN '", B/binary, "'">>;
+    <<(unparse_metric(M))/binary, " FROM '", B/binary, "'">>;
 unparse(#{op := lookup, args := [B, M, Where]}) ->
-    <<(unparse_metric(M))/binary, " IN '", B/binary,
-      "' WHERE ", (unparse_where(Where))/binary>>;
+    <<(unparse_metric(M))/binary, " FROM '", B/binary,
+      "' WHERE ", (unparse_where(Where))/binary>>.
 
-unparse(X) ->
-    io:format("Unparse old: ~p~n", [X]),
-    unparse_old(X).
+%% unparse(X) ->
+%%     io:format("Unparse old: ~p~n", [X]),
+%%     unparse_old(X).
 
-unparse_old({select, Q, A, T, R}) ->
-    <<"SELECT ", (unparse_old(Q))/binary, " FROM ", (unparse_old(A))/binary, " ",
-      (unparse_old(T))/binary, " IN ", (unparse_old(R))/binary>>;
-unparse_old({select, Q, T, R}) ->
-    <<"SELECT ", (unparse_old(Q))/binary, " ", (unparse_old(T))/binary, " IN ",
-      (unparse_old(R))/binary>>;
-unparse_old({last, Q}) ->
-    <<"LAST ", (unparse_old(Q))/binary>>;
-unparse_old({between, A, B}) ->
-    <<"BETWEEN ", (unparse_old(A))/binary, " AND ", (unparse_old(B))/binary>>;
-unparse_old({'after', A, B}) ->
-    <<"AFTER ", (unparse_old(A))/binary, " FOR ", (unparse_old(B))/binary>>;
-unparse_old({before, A, B}) ->
-    <<"BEFORE ", (unparse_old(A))/binary, " FOR ", (unparse_old(B))/binary>>;
+%% unparse_old({select, Q, A, T, R}) ->
+%%     <<"SELECT ", (unparse_old(Q))/binary, " ALIAS ", (unparse_old(A))/binary, " ",
+%%       (unparse_old(T))/binary, " ALIAS ", (unparse_old(R))/binary>>;
+%% unparse_old({select, Q, T, R}) ->
+%%     <<"SELECT ", (unparse_old(Q))/binary, " ", (unparse_old(T))/binary, " ALIAS ",
+%%       (unparse_old(R))/binary>>;
+%% unparse_old({last, Q}) ->
+%%     <<"LAST ", (unparse_old(Q))/binary>>;
+%% unparse_old({between, A, B}) ->
+%%     <<"BETWEEN ", (unparse_old(A))/binary, " AND ", (unparse_old(B))/binary>>;
+%% unparse_old({'after', A, B}) ->
+%%     <<"AFTER ", (unparse_old(A))/binary, " FOR ", (unparse_old(B))/binary>>;
+%% unparse_old({before, A, B}) ->
+%%     <<"BEFORE ", (unparse_old(A))/binary, " FOR ", (unparse_old(B))/binary>>;
 
-unparse_old({var, V}) ->
-    V;
+%% unparse_old({var, V}) ->
+%%     V;
 
 
-unparse_old({alias, A, V}) ->
-    <<(unparse_old(V))/binary, " AS '", A/binary, "'">>;
-unparse_old({get, {B, M}}) ->
-    <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
-unparse_old({sget, {B, M}}) ->
-    <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
-unparse_old({lookup, {in, B, M}}) ->
-    <<(unparse_metric(M))/binary, " IN '", B/binary, "'">>;
-unparse_old({lookup, {in, B, M, Where}}) ->
-    <<(unparse_metric(M))/binary, " IN '", B/binary,
-      "' WHERE ", (unparse_where(Where))/binary>>;
-unparse_old({combine, Fun, L}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    <<Funs/binary, "(", (unparse_old(L))/binary, ")">>;
+%% unparse_old({alias, A, V}) ->
+%%     <<(unparse_old(V))/binary, " AS '", A/binary, "'">>;
+%% unparse_old({get, {B, M}}) ->
+%%     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
+%% unparse_old({sget, {B, M}}) ->
+%%     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
+%% unparse_old({lookup, {in, B, M}}) ->
+%%     <<(unparse_metric(M))/binary, " FROM '", B/binary, "'">>;
+%% unparse_old({lookup, {in, B, M, Where}}) ->
+%%     <<(unparse_metric(M))/binary, " FROM '", B/binary,
+%%       "' WHERE ", (unparse_where(Where))/binary>>;
+%% unparse_old({combine, Fun, L}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     <<Funs/binary, "(", (unparse_old(L))/binary, ")">>;
 
-unparse_old(N) when is_integer(N)->
-    <<(integer_to_binary(N))/binary>>;
+%% unparse_old(N) when is_integer(N)->
+%%     <<(integer_to_binary(N))/binary>>;
 
-unparse_old(F) when is_float(F)->
-    <<(float_to_binary(F))/binary>>;
+%% unparse_old(F) when is_float(F)->
+%%     <<(float_to_binary(F))/binary>>;
 
-unparse_old(now) ->
-    <<"NOW">>;
+%% unparse_old(now) ->
+%%     <<"NOW">>;
 
-unparse_old({ago, T}) ->
-    <<(unparse_old(T))/binary, " AGO">>;
+%% unparse_old({ago, T}) ->
+%%     <<(unparse_old(T))/binary, " AGO">>;
 
-unparse_old({time, N, ms}) ->
-    <<(integer_to_binary(N))/binary, " ms">>;
-unparse_old({time, N, s}) ->
-    <<(integer_to_binary(N))/binary, " s">>;
-unparse_old({time, N, m}) ->
-    <<(integer_to_binary(N))/binary, " m">>;
-unparse_old({time, N, h}) ->
-    <<(integer_to_binary(N))/binary, " h">>;
-unparse_old({time, N, d}) ->
-    <<(integer_to_binary(N))/binary, " d">>;
-unparse_old({time, N, w}) ->
-    <<(integer_to_binary(N))/binary, " w">>;
+%% unparse_old({time, N, ms}) ->
+%%     <<(integer_to_binary(N))/binary, " ms">>;
+%% unparse_old({time, N, s}) ->
+%%     <<(integer_to_binary(N))/binary, " s">>;
+%% unparse_old({time, N, m}) ->
+%%     <<(integer_to_binary(N))/binary, " m">>;
+%% unparse_old({time, N, h}) ->
+%%     <<(integer_to_binary(N))/binary, " h">>;
+%% unparse_old({time, N, d}) ->
+%%     <<(integer_to_binary(N))/binary, " d">>;
+%% unparse_old({time, N, w}) ->
+%%     <<(integer_to_binary(N))/binary, " w">>;
 
-unparse_old({histogram, HighestTrackableValue, SignificantFigures, Q, T}) ->
-    <<"histogram(",
-      (integer_to_binary(HighestTrackableValue))/binary, ", ",
-      (integer_to_binary(SignificantFigures))/binary, ", ",
-      (unparse_old(Q))/binary, ", ",
-      (unparse_old(T))/binary, ")">>;
-unparse_old({hfun, Fun, Q}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    <<Funs/binary, "(", Qs/binary, ")">>;
+%% unparse_old({histogram, HighestTrackableValue, SignificantFigures, Q, T}) ->
+%%     <<"histogram(",
+%%       (integer_to_binary(HighestTrackableValue))/binary, ", ",
+%%       (integer_to_binary(SignificantFigures))/binary, ", ",
+%%       (unparse_old(Q))/binary, ", ",
+%%       (unparse_old(T))/binary, ")">>;
+%% unparse_old({hfun, Fun, Q}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     <<Funs/binary, "(", Qs/binary, ")">>;
 
-unparse_old({hfun, percentile, Q, P}) ->
-    Qs = unparse_old(Q),
-    Ps = unparse_old(P),
-    <<"percentile(", Qs/binary, ", ", Ps/binary, ")">>;
+%% unparse_old({hfun, percentile, Q, P}) ->
+%%     Qs = unparse_old(Q),
+%%     Ps = unparse_old(P),
+%%     <<"percentile(", Qs/binary, ", ", Ps/binary, ")">>;
 
-unparse_old({aggr, Fun, Q}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    <<Funs/binary, "(", Qs/binary, ")">>;
-unparse_old({maggr, Fun, Q}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    <<Funs/binary, "(", Qs/binary, ")">>;
-unparse_old({aggr, Fun, Q, T}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    Ts = unparse_old(T),
-    <<Funs/binary, "(", Qs/binary, ", ", Ts/binary, ")">>;
-unparse_old({aggr, Fun, Q, A, T}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    As = unparse_old(A),
-    Ts = unparse_old(T),
-    <<Funs/binary, "(", Qs/binary, ", ", As/binary, ", ", Ts/binary, ")">>;
-unparse_old({math, multiply, Q, V}) ->
-    Qs = unparse_old(Q),
-    Vs = unparse_old(V),
-    <<Qs/binary, " * ", Vs/binary>>;
-unparse_old({math, divide, Q, V}) ->
-    Qs = unparse_old(Q),
-    Vs = unparse_old(V),
-    <<Qs/binary, " / ", Vs/binary>>;
-unparse_old({math, Fun, Q, V}) ->
-    Funs = list_to_binary(atom_to_list(Fun)),
-    Qs = unparse_old(Q),
-    Vs = unparse_old(V),
-    <<Funs/binary, "(", Qs/binary, ", ", Vs/binary, ")">>.
+%% unparse_old({aggr, Fun, Q}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     <<Funs/binary, "(", Qs/binary, ")">>;
+%% unparse_old({maggr, Fun, Q}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     <<Funs/binary, "(", Qs/binary, ")">>;
+%% unparse_old({aggr, Fun, Q, T}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     Ts = unparse_old(T),
+%%     <<Funs/binary, "(", Qs/binary, ", ", Ts/binary, ")">>;
+%% unparse_old({aggr, Fun, Q, A, T}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     As = unparse_old(A),
+%%     Ts = unparse_old(T),
+%%     <<Funs/binary, "(", Qs/binary, ", ", As/binary, ", ", Ts/binary, ")">>;
+%% unparse_old({math, multiply, Q, V}) ->
+%%     Qs = unparse_old(Q),
+%%     Vs = unparse_old(V),
+%%     <<Qs/binary, " * ", Vs/binary>>;
+%% unparse_old({math, divide, Q, V}) ->
+%%     Qs = unparse_old(Q),
+%%     Vs = unparse_old(V),
+%%     <<Qs/binary, " / ", Vs/binary>>;
+%% unparse_old({math, Fun, Q, V}) ->
+%%     Funs = list_to_binary(atom_to_list(Fun)),
+%%     Qs = unparse_old(Q),
+%%     Vs = unparse_old(V),
+%%     <<Funs/binary, "(", Qs/binary, ", ", Vs/binary, ")">>.
 
 apply_times(#{op := last, args := [L]}, R) ->
     #{op => last, args => [apply_times(L, R)]};
