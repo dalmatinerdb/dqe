@@ -274,19 +274,8 @@ prop_dflow_prepare() ->
                        end
                    end)).
 
-prop_glob_match() ->
-    ?FORALL({S, G, M}, glob(),
-            begin
-                M ==  ([S] == ?P:glob_match(G, [S]))
-            end).
-
 mock() ->
     application:ensure_all_started(dqe_connection),
-    meck:new(dqe, [passthrough]),
-    meck:expect(dqe, glob_match,
-                fun(_Glob, Metrics) ->
-                        {ok, Metrics}
-                end),
     meck:new(ddb_connection),
     meck:expect(ddb_connection, list,
                 fun (_) ->
@@ -302,7 +291,6 @@ mock() ->
 
 unmock() ->
     meck:unload(ddb_connection),
-    meck:unload(dqe),
     ok.
 
 ensure_dqe_fun() ->

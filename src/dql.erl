@@ -3,6 +3,7 @@
 -export([prepare/1, glob_match/2, flatten/1, unparse_metric/1,
          unparse_where/1, resolve_functions/1]).
 
+-export_type([query_part/0, dqe_fun/0, query_stmt/0]).
 
 -type time() :: #{ op => time, args => [pos_integer() | ms | s | m | h | d | w]} | pos_integer().
 
@@ -29,10 +30,9 @@
         #{op => sget, args => [[binary() | '*'] | non_neg_integer()]}.
 
 
+-type query_part() :: cmb_stmt() | flat_stmt().
 -type cmb_stmt() ::
-        {combine, dqe_fun(), [statement()]}.
-
-
+        {combine, dqe_fun(), [statement()] | get_stmt()}.
 
 -type statement() ::
         get_stmt() |
@@ -40,11 +40,13 @@
         cmb_stmt().
 
 -type flat_terminal() ::
-        {combine, dqe_fun(), [flat_stmt()]}.
+        {combine, dqe_fun(), [flat_stmt() | get_stmt()]}.
 
 -type flat_stmt() ::
-%%        flat_terminal() |
         {calc, [dqe_fun()], flat_terminal() | get_stmt()}.
+
+-type named() :: #{op => named, args => [binary() | flat_stmt()]}.
+-type query_stmt() :: {named, binary(), flat_stmt()}.
 
 -type parser_error() ::
         {error, binary()}.
@@ -131,11 +133,21 @@ is_constant(histogram_list) -> false;
 is_constant(_) -> true.
 
 %% TODO: Look this up from DDB!
+-spec get_br(binary()) -> {ok, pos_integer()}.
+get_br(_Bucket) ->
+    {ok, 1000}.
 
-bucket_resolution(O = #{args := A = [_Bucket, _]}, BucketResolutions) ->
-    %% gb_trees:enter(Alias, Res, A1)
-    Res = 1000,
-    {ok, O#{args => [Res | A]}, BucketResolutions}.
+-spec bucket_resolution(get_stmt(), #{}) ->
+                               {ok, get_stmt(), #{}}.
+bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
+    {Res, BR1} = case maps:get(Bucket, BucketResolutions, undefined) of
+                     undefined ->
+                         {ok, R} = get_br(Bucket),
+                         {R, maps:put(Bucket, R, BucketResolutions)};
+                     {value, R} ->
+                         {R, BucketResolutions}
+                 end,
+    {ok, O#{args => [Res | A]}, BR1}.
 
 
 -spec parse(string() | binary()) ->
@@ -158,19 +170,25 @@ parse(S) ->
             end
     end.
 
-get_times(O = #{op := named, args := [N, C]}, T, BucketResolutions) ->
-    case get_times(C, T, BucketResolutions) of
+-spec get_times(named(), time(), #{}) ->
+                       {ok, named(), #{}} |
+                       {error, resolution_conflict}.
+get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
+    case get_times_(C, T, BucketResolutions) of
         {ok, C1, BucketResolutions1} ->
             {ok, O#{args => [N, C1]}, BucketResolutions1};
         E ->
             E
-    end;
-get_times({calc, Chain,
-           {combine,
-            F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
-          }, T, BucketResolutions) ->
-    Res = lists:foldl(fun (E, {ok, Acc, BRAcc}) ->
-                              case get_times(E, T, BRAcc) of
+    end.
+-spec get_times_(flat_stmt(), time(), #{}) ->
+                        {ok, flat_stmt(), #{}} |
+                        {error, resolution_conflict}.
+get_times_({calc, Chain,
+            {combine,
+             F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
+           }, T, #{} = BucketResolutions) ->
+    Res = lists:foldl(fun (E, {ok, Acc, #{} = BRAcc}) ->
+                              case get_times_(E, T, BRAcc) of
                                   {ok, E1, BR1} ->
                                       {ok, [E1 | Acc], BR1};
                                   Error ->
@@ -180,7 +198,7 @@ get_times({calc, Chain,
                               E
                       end, {ok, [], BucketResolutions}, Elements),
     case Res of
-        {ok, Elements1, BR} ->
+        {ok, Elements1, #{} = BR} ->
             Rmss = [get_resolution(E) || E <- Elements1],
             case lists:usort(Rmss) of
                 [{ok, Rms}] ->
@@ -198,21 +216,18 @@ get_times({calc, Chain,
                 _ ->
                     {error, resolution_conflict}
             end;
-        E ->
-            E
+        {error, E} ->
+            {error, E}
     end;
 
-get_times({calc, Chain, Get}, T, BucketResolutions) ->
-    case bucket_resolution(Get, BucketResolutions) of
-        {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} ->
-            T1 = apply_times(T, Rms),
-            {Start, Count} = compute_se(T1, Rms),
-            Calc1 = {calc, Chain, Get1#{resolution => Rms,
-                                        args => [Start, Count | A]}},
-            {ok, apply_times(Calc1), BucketResolutions1};
-        E ->
-            E
-    end.
+get_times_({calc, Chain, Get}, T, BucketResolutions) ->
+    {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} =
+        bucket_resolution(Get, BucketResolutions),
+    T1 = apply_times(T, Rms),
+    {Start, Count} = compute_se(T1, Rms),
+    Calc1 = {calc, Chain, Get1#{resolution => Rms,
+                                args => [Start, Count | A]}},
+    {ok, apply_times(Calc1), BucketResolutions1}.
 
 get_resolution(#{op := O, args := [_Start, _Count, Rms | _]})
   when O =:= get;
@@ -228,6 +243,7 @@ get_resolution({calc, Chain, _}) ->
 
 get_resolution({combine, #{resolution := Rms}, _Elements}) ->
     {ok, Rms}.
+
 
 apply_times(#{op := named, args := [N, C]}) ->
     C1 = apply_times(C),
@@ -270,9 +286,16 @@ map_costants(#{op := float, args := [N]}) ->
 map_costants(E) ->
     E.
 
-
+-spec flatten(dqe_fun() | get_stmt()) ->
+                     #{op => named, args => [binary() | flat_stmt()]}.
 flatten(#{op := named, args := [N, Child]}) ->
-    {named, N, flatten(Child, [])};
+    C = #{return := R} = flatten(Child, []),
+    #{
+       op => named,
+       args => [N, C],
+       signature => [string, R],
+       return => R
+     };
 
 flatten(Child = #{return := R}) ->
     N = unparse(Child),
@@ -370,64 +393,81 @@ lexer_error(Line, E)  ->
                                          [Line, E]))}.
 
 %% Start here
+-spec prepare(string()) ->
+                     {error, term()} |
+                     {ok, [query_stmt()]}.
 prepare(S) ->
     case parse(S) of
         {ok, {select, Qs, Aliases, T}} ->
-            dqe:pdebug('parse', "Query parsed: ~s", [S]),
+            dqe_lib:pdebug('parse', "Query parsed: ~s", [S]),
             extract_aliases(Qs, T, Aliases);
         E ->
             E
     end.
 
+-spec extract_aliases([statement()], time(), [term()]) ->
+                     {error, term()} |
+                     {ok, [query_stmt()]}.
 extract_aliases(Qs, T, Aliases) ->
     {AliasesF, MetricsF} =
         lists:foldl(fun({alias, Alias, Res}, {AAcc, MAcc}) ->
                             {_, A1, M1} = preprocess_qry(Res, AAcc, MAcc),
                             {gb_trees:enter(Alias, Res, A1), M1}
                     end, {gb_trees:empty(), gb_trees:empty()}, Aliases),
-    dqe:pdebug('parse', "Aliases resolved.", []),
-    preprocess(Qs, T, AliasesF, MetricsF) .
+    dqe_lib:pdebug('parse', "Aliases resolved.", []),
+    preprocess(Qs, T, AliasesF, MetricsF).
 
 
 preprocess(Qs, T, Aliases, Metrics) ->
-    {QQ, _AliasesQ, MetricsQ} =
+    {QQ, _AliasesQ, _MetricsQ} =
         lists:foldl(fun(Q, {QAcc, AAcc, MAcc}) ->
                             {Q1, A1, M1} = preprocess_qry(Q, AAcc, MAcc),
                             {[Q1 | QAcc] , A1, M1}
                     end, {[], Aliases, Metrics}, Qs),
-    dqe:pdebug('parse', "Preprocessor done.", []),
+    dqe_lib:pdebug('parse', "Preprocessor done.", []),
     QQ1 = lists:reverse(QQ),
-    resolve_query_functions(QQ1, T, MetricsQ).
+    resolve_query_functions(QQ1, T).
 
-resolve_query_functions(Qs, T, Metrics) ->
+resolve_query_functions(Qs, T) ->
     case resolve_functions(Qs, []) of
         {ok, Qs1} ->
-            flatten(Qs1, T, Metrics);
+            flatten_step(Qs1, T);
         E ->
             E
     end.
 
-flatten(Qs, T, Metrics) ->
+flatten_step(Qs, T) ->
     Qs1 = [flatten(Q) || Q <- Qs],
-    dqe:pdebug('parse', "Query flattened.", []),
-    expand(Qs1, T, Metrics).
+    dqe_lib:pdebug('parse', "Query flattened.", []),
+    expand(Qs1, T).
 
-expand(Qs, T, Metrics) ->
+-spec expand([flat_stmt()], time()) ->
+                    %% {error, term()} |
+                    {'ok',[query_stmt()]}.
+expand(Qs, T) ->
     Qs1 = [expand(Q) || Q <- Qs],
     Qs2 = lists:flatten(Qs1),
-    get_resolution(Qs2, T, Metrics).
+    get_resolution(Qs2, T).
 
-get_resolution(Qs, T, Metrics) ->
-    {Qs1, _} = lists:foldl(fun (Q, {QAcc, RAcc}) ->
-                                   {ok, Q1, RAcc1} = get_times(Q, T, RAcc),
-                                   {[Q1 | QAcc], RAcc1}
-                           end, {[], gb_trees:empty()}, Qs),
+-spec get_resolution_fn(named(),
+                        {[named()], time(), #{}}) ->
+                               {[named()], time(), #{}}.
+get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
+    {ok, Q1, RAcc1} = get_times(Q, T, RAcc),
+    {[Q1 | QAcc], T, RAcc1}.
+
+-spec get_resolution([flat_stmt()], time()) ->
+                            %% {error, term()} |
+                            {'ok',[{named, binary(), flat_stmt()}]}.
+get_resolution(Qs, T) ->
+    {Qs1, _, _} = lists:foldl(fun get_resolution_fn/2,
+                           {[], T, #{}}, Qs),
     Qs2 = lists:reverse(Qs1),
-    propagate_resolutions(Qs2, Metrics).
+    propagate_resolutions(Qs2).
 
-propagate_resolutions(Qs, Metrics) ->
+propagate_resolutions(Qs) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
-    {ok, {Qs1, Metrics}}.
+    {ok, Qs1}.
 
 
 expand(Q = #{op := named, args := [N, S]}) ->
@@ -462,14 +502,14 @@ expand(Q = #{op := sget,
 
 %% compute_times(Qs, T, Metrics) ->
 %%     %%T1 = apply_times(T, Rms),
-%%     dqe:pdebug('parse', "Times normalized.", []),
+%%     dqe_lib:pdebug('parse', "Times normalized.", []),
 %%     apply_times(Qs, T, Aliases).
 
 
 %% apply_times(Qs1, T, MetricsQ) ->
 %%     {Start, Count} = compute_se(T1, 1000), %Rms
-%%     dqe:pdebug('parse', "Time and resolutions adjusted.", []),
-%%     dqe:pdebug('parse', "Query Translated.", []),
+%%     dqe_lib:pdebug('parse', "Time and resolutions adjusted.", []),
+%%     dqe_lib:pdebug('parse', "Query Translated.", []),
 %%     {ok, {Qs1, MetricsQ}}.
 
 
@@ -657,7 +697,6 @@ unparse_where({'and', Clause1, Clause2}) ->
     P1 = unparse_where(Clause1),
     P2 = unparse_where(Clause2),
     <<P1/binary, " AND (", P2/binary, ")">>.
-
 
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],
