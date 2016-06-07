@@ -12,12 +12,14 @@
           chunk :: pos_integer()
          }).
 
-init([Start, Count, Resolution, Bucket, Key]) when is_binary(Key) ->
+init([Start, Count, Resolution, Bucket, Key]) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
     init([Start, Count, Resolution, Bucket, Key, Chunk]);
 
-init([Start, Count, _Resolution, Bucket, Key, Chunk]) ->
-    {ok, #state{start = Start, count = Count, bucket = Bucket, key = Key, chunk = Chunk}, []}.
+init([Start, Count, _Resolution, Bucket, KeyL, Chunk]) ->
+    Key = dproto:metric_from_list(KeyL),
+    {ok, #state{start = Start, count = Count, bucket = Bucket, key = Key,
+                chunk = Chunk}, []}.
 
 describe(#state{bucket = Bucket, key = Key}) ->
     [Bucket, "/", Key].
