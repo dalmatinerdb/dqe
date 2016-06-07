@@ -295,7 +295,7 @@ resolve_functions(#{op := fcall, args := #{name   := Function,
                 %% If we find a function that does not take a
                 %% list of sub functions we know this is a normal
                 %%aggregate.
-                {ok,{{_, none, _}, ReturnType, FunMod}} ->
+                {ok,{{_, _, none}, ReturnType, FunMod}} ->
                     FArgs = #{name      => Function,
                               orig_args => Args,
                               mod       => FunMod,
