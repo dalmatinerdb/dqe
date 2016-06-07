@@ -1,4 +1,5 @@
 -module(dqe_derivate).
+-behaviour(dqe_fun).
 
 -include_lib("mmath/include/mmath.hrl").
 
@@ -13,8 +14,8 @@ init([]) ->
 chunk(#state{}) ->
     ?RDATA_SIZE.
 
-resolution(Resolution, #state{}) ->
-    Resolution.
+resolution(Resolution, State) ->
+    {Resolution, State}.
 
 
 describe(#state{}) ->

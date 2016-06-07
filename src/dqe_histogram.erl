@@ -1,5 +1,4 @@
 -module(dqe_histogram).
-
 -behaviour(dflow).
 
 -include_lib("mmath/include/mmath.hrl").

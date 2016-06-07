@@ -13,8 +13,8 @@ init([]) ->
 chunk(#state{}) ->
     1.
 
-resolution(_Resolution, #state{}) ->
-    1.
+resolution(_Resolution, State) ->
+    {1, State}.
 
 describe(#state{}) ->
     ["sum()"].
