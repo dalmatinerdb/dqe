@@ -14,9 +14,11 @@
 init([Start, Count, Resolution, Bucket, Key]) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
     init([Start, Count, Resolution, Bucket, Key, Chunk]);
-
-init([Start, Count, _Resolution, Bucket, KeyL, Chunk]) ->
+init([Start, Count, Resolution, Bucket, KeyL, Chunk]) when is_list(KeyL)->
     Key = dproto:metric_from_list(KeyL),
+    init([Start, Count, Resolution, Bucket, Key, Chunk]);
+
+init([Start, Count, _Resolution, Bucket, Key, Chunk]) ->
     {ok, #state{start = Start, count = Count, bucket = Bucket, key = Key,
                 chunk = Chunk}, []}.
 
