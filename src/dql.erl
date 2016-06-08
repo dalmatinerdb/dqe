@@ -401,9 +401,11 @@ get_times_({calc, Chain,
                     F1 = F#{args => A1,
                             resolution => Rms1},
                     Comb1 = {combine, F1, Elements2},
+                    
                     Calc1 = {calc, Chain, Comb1},
                     {ok, apply_times(Calc1), BR};
-                _ ->
+                _Error ->
+                    io:format("Elements: ~p~n", [Elements]),
                     {error, resolution_conflict}
             end;
         {error, E} ->
@@ -482,9 +484,11 @@ apply_times(#{op := named, args := [N, C]}) ->
     C1 = apply_times(C),
     {named, N, C1};
 
-apply_times({calc, Chain, {combine, F, Elements}}) ->
+apply_times({calc, Chain, {combine, F = #{resolution := Rms}, Elements}}) ->
     Elements1 = [apply_times(E) || E <- Elements],
-    {calc, Chain, {combine, F, Elements1}};
+    Chain1 = time_walk_chain(Chain, Rms, []),
+    Chain2 = lists:reverse(Chain1),
+    {calc, Chain2, {combine, F, Elements1}};
 
 apply_times({calc, Chain, Get}) ->
     {ok, Rms} = get_resolution(Get),

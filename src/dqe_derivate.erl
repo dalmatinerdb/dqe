@@ -14,9 +14,8 @@ init([]) ->
 chunk(#state{}) ->
     ?RDATA_SIZE.
 
-resolution(Resolution, State) ->
-    {Resolution, State}.
-
+resolution(_Resolution, State) ->
+    {1, State}.
 
 describe(#state{}) ->
     ["derivate()"].
