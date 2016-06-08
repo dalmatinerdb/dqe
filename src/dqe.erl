@@ -239,6 +239,16 @@ translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
              end,
     {ok, _R, G1} = translate_g(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
+
+translate({combine,
+           #{resolution := R, args := #{mod := Mod, state := State}},
+           Parts}) ->
+    Parts1 = [begin
+                  {ok, _, P1} = translate(Part),
+                  P1
+              end|| Part <- Parts],
+    {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}};
+
 translate(G) ->
     translate_g(G).
 
