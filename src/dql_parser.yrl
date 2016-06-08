@@ -96,6 +96,7 @@ tag -> part_or_name                  : {tag, <<>>, '$1'}.
 tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.
 
 where_part -> tag '=' part_or_name : {'=', '$1', '$3'}.
+where_part -> tag                  : {'=', '$1', <<>>}.
 where_part -> '(' where ')'        : '$2'.
 
 where -> where_part              : '$1'.
