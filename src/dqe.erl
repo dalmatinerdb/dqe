@@ -226,7 +226,7 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
 -spec translate(DQLTerm :: dql:query_part() | dql:dqe_fun()) ->
                        {ok, pos_integer(), dflow:step()}.
 translate({calc, [], G}) ->
-    translate_g(G);
+    translate(G);
 
 %% TODO we can do this better!
 translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
@@ -237,26 +237,13 @@ translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
                     }}, Acc) ->
                      {dqe_fun_flow, [Mod, State, Acc]}
              end,
-    {ok, _R, G1} = translate_g(G),
+    {ok, _R, G1} = translate(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 
-translate({combine,
-           #{resolution := R, args := #{mod := Mod, state := State}},
-           Parts}) ->
-    Parts1 = [begin
-                  {ok, _, P1} = translate(Part),
-                  P1
-              end|| Part <- Parts],
-    {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}};
-
-translate(G) ->
-    translate_g(G).
-
-
-translate_g(#{op := get, resolution := R, args := Args}) ->
+translate(#{op := get, resolution := R, args := Args}) ->
     {ok, R, {dqe_get, Args}};
 
-translate_g({combine,
+translate({combine,
              #{resolution := R, args := #{mod := Mod, state := State}},
              Parts}) ->
     Parts1 = [begin
