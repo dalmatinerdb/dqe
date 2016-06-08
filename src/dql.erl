@@ -430,7 +430,7 @@ bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
                      undefined ->
                          {ok, R} = get_br(Bucket),
                          {R, maps:put(Bucket, R, BucketResolutions)};
-                     {value, R} ->
+                     R ->
                          {R, BucketResolutions}
                  end,
     {ok, O#{args => [Res | A]}, BR1}.
