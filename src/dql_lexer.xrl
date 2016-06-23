@@ -7,9 +7,9 @@ Sign    = [\-+]?
 Digit   = [0-9]
 Float   = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
 
-PART    = '([^']|\.)+'
+PART    = '(\\.|[^\'])+'
 %'% damn you syntax highlighter
-DATE    = "([^"]|\.)+"
+DATE    = "(\\.|[^\"])+"
 %"% damn you syntax highlighter
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
@@ -78,7 +78,10 @@ Erlang code.
 
 -ignore_xref([format_error/1, string/2, token/2, token/3, tokens/2, tokens/3]).
 -dialyzer({nowarn_function, yyrev/2}).
-strip(TokenChars,TokenLen) -> lists:sublist(TokenChars, 2, TokenLen - 2).
+
+strip(TokenChars,TokenLen) ->
+    S = lists:sublist(TokenChars, 2, TokenLen - 2),
+    re:replace(S, "\\\\(.)", "\\1", [global, {return, list}]).
 
 a(L) -> list_to_atom(L).
 i(L) -> list_to_integer(L).
