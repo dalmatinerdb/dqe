@@ -7,10 +7,8 @@ Sign    = [\-+]?
 Digit   = [0-9]
 Float   = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
 
-PART    = '(\\.|[^\'])+'
-%'% damn you syntax highlighter
-DATE    = "(\\.|[^\"])+"
-%"% damn you syntax highlighter
+PART    = '(\\.|[^\'\\])+'
+DATE    = "(\\.|[^\"\\])+"
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
 WS      = ([\000-\s]|%.*)
