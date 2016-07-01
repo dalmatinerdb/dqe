@@ -1,4 +1,3 @@
-{"1.1.0",
 [{<<"cf">>,{pkg,<<"cf">>,<<"0.2.1">>},2},
  {<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.1.22">>},1},
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.3">>},0},
@@ -7,7 +6,8 @@
  {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.1">>},0},
  {<<"dqe_idx">>,{pkg,<<"dqe_idx">>,<<"0.1.18">>},0},
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.1.13">>},0},
- {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.2.0">>},0},
+ {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.2.3">>},0},
+ {<<"epgsql">>,{pkg,<<"epgsql">>,<<"3.1.1">>},2},
  {<<"erlang_localtime">>,{pkg,<<"erlang_localtime">>,<<"1.0.0">>},1},
  {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"0.20.0">>},1},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
@@ -17,24 +17,6 @@
   {git,"https://github.com/dalmatinerdb/mmath.git",
        {ref,"01a4f5e82f49d5ed17c9a7985a844552e004717d"}},
   0},
+ {<<"pgapp">>,{pkg,<<"pgapp">>,<<"0.0.1">>},1},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},1},
- {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0}]}.
-[
-{pkg_hash,[
- {<<"cf">>, <<"69D0B1349FD4D7D4DC55B7F407D29D7A840BF9A1EF5AF529F1EBE0CE153FC2AB">>},
- {<<"ddb_client">>, <<"849A8B9F72E81EE9208C7853CED54EE5F4D5E4B903E9A76CCD8A88EF979B0D59">>},
- {<<"ddb_connection">>, <<"36ED7EDEE7338DE0D1491C462EE79E9954023C19438F9A84D31830A1C5CB8DCD">>},
- {<<"dflow">>, <<"EF3960BB86732807A87B75035144BB4F2392803D53F02091A71AB4A777AC5F6C">>},
- {<<"dproto">>, <<"4E79DA387BD9F64F4DF9F574F3243A4C85225DE8ADBDC22737303DD4354C1604">>},
- {<<"dqe_fun">>, <<"7A28F713AA1081BFBF6DCE8FF4FEB7B57C6BA6AFD18252E6E95198C96E366B91">>},
- {<<"dqe_idx">>, <<"9EBF0090927E42817B59A974D47C01CBB3B283D73E04B2F034FE81ED24D1AC23">>},
- {<<"dqe_idx_ddb">>, <<"A422B7410346DEE845E78C48A2030701BF3E52B0E0F4D730DD897277CE2B0B9C">>},
- {<<"dqe_idx_pg">>, <<"D0AE3F87097F3A2FDD15F5C06B29CC3FF536F843ED7990F160D474C9EBA92755">>},
- {<<"erlang_localtime">>, <<"497DFD4D13523D3E0EECDCB8D6D59857CF642A17A6BDC6133FF906FDAF2AEF21">>},
- {<<"erlware_commons">>, <<"721F902031D0313E192FD4038C326F89415855CD1A5CF804AB04B314D0944146">>},
- {<<"goldrush">>, <<"2024BA375CEEA47E27EA70E14D2C483B2D8610101B4E852EF7F89163CDB6E649">>},
- {<<"hdr_histogram">>, <<"95A7EC3C8FA354E4CFBFC8F4168EE8F07BD3965CA22B9C45B2A2C9D13B03DCEC">>},
- {<<"lager">>, <<"8E389F916384ABF5F62169969BD7515C4C252CBBDA53FEEBBEF90F47DB5EAAD1">>},
- {<<"poolboy">>, <<"6B46163901CFD0A1B43D692657ED9D7E599853B3B21B95AE5AE0A777CF9B6CA8">>},
- {<<"qdate">>, <<"6037343CAA1EF8BA8AF13AFD5A2A89CE7695C1E8A12D87702D66624290E3BE76">>}]}
-].
+ {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0}].
