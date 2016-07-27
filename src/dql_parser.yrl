@@ -154,7 +154,7 @@ timeframe -> kw_before  pit         kw_for int_or_time : #{op => before,  args =
 %% NOW keyword.
 pit          -> int_or_time kw_ago : #{op => ago, args => ['$1']}.
 pit          -> integer : unwrap('$1').
-pit          -> date:  qdate:to_unixtime(unwrap('$1')) * 1000.
+pit          -> date : {time, qdate:to_unixtime(unwrap('$1')) * 1000, ms}.
 pit          -> kw_now : now.
 
 

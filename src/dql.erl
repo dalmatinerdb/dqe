@@ -1,5 +1,6 @@
 -module(dql).
 
+%-export([prepare/1, compute_se/2, apply_times/2]).
 -export([prepare/1]).
 -ifdef(TEST).
 -export([parse/1]).
