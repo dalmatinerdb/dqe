@@ -99,10 +99,10 @@ run(Query) ->
 run(Query, Timeout) ->
     put(start, erlang:system_time()),
     case prepare(Query) of
-        {ok, {0, 0, _Parts}} ->
+        {ok, {0, 0, _Parts}, _Start} ->
             dqe_lib:pdebug('query', "prepare found no metrics.", []),
             {error, no_results};
-        {ok, {Total, Unique, Parts}} ->
+        {ok, {Total, Unique, Parts}, Start} ->
             dqe_lib:pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
             Funnel = {dqe_funnel, [Parts]},
@@ -126,7 +126,6 @@ run(Query, Timeout) ->
                 {ok, [Result]} ->
                     dqe_lib:pdebug('query', "Query complete.", []),
                     %% Result1 = [Element || {points, Element} <- Result],
-                    Start = 423, %%@TODO: this isn't correct any more!
                     {ok, Start, Result};
                 {ok, []} ->
                     dqe_lib:pdebug('query', "Query has no results.", []),
@@ -154,14 +153,14 @@ run(Query, Timeout) ->
 
 prepare(Query) ->
     case dql:prepare(Query) of
-        {ok, Parts} ->
+        {ok, Parts, Start} ->
             dqe_lib:pdebug('prepare', "Parsing done.", []),
             {Total, Unique} = count_parts(Parts),
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
                            [Total, Unique]),
             {ok, Parts1} = add_collect(Parts, []),
             dqe_lib:pdebug('prepare', "Naing applied.", []),
-            {ok, {Total, Unique, Parts1}};
+            {ok, {Total, Unique, Parts1}, Start};
         E ->
             io:format("E: ~p~n", [E]),
             E

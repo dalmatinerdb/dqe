@@ -67,7 +67,7 @@
 %%--------------------------------------------------------------------
 -spec prepare(string()) ->
                      {error, term()} |
-                     {ok, [query_stmt()]}.
+                     {ok, [query_stmt()], pos_integer()}.
 prepare(S) ->
     case parse(S) of
         {ok, {select, Qs, Aliases, T}} ->
@@ -88,7 +88,7 @@ prepare(S) ->
 %%--------------------------------------------------------------------
 -spec extract_aliases([statement()], time(), [term()]) ->
                      {error, term()} |
-                     {ok, [query_stmt()]}.
+                     {ok, [query_stmt()], pos_integer()}.
 extract_aliases(Qs, T, Aliases) ->
     AliasesF =
         lists:foldl(fun({alias, Alias, Res}, AAcc) ->
@@ -104,7 +104,7 @@ extract_aliases(Qs, T, Aliases) ->
 %%--------------------------------------------------------------------
 -spec resolve_aliases([statement()], time(), gb_trees:tree()) ->
                         {error, term()} |
-                        {ok, [query_stmt()]}.
+                        {ok, [query_stmt()], pos_integer()}.
 resolve_aliases(Qs, T, Aliases) ->
     {QQ, _AliasesQ} =
         lists:foldl(fun(Q, {QAcc, AAcc}) ->
@@ -123,7 +123,7 @@ resolve_aliases(Qs, T, Aliases) ->
 %%--------------------------------------------------------------------
 -spec resolve_query_functions([statement()], time()) ->
                      {error, term()} |
-                     {ok, [query_stmt()]}.
+                     {ok, [query_stmt()], pos_integer()}.
 resolve_query_functions(Qs, T) ->
     case resolve_functions(Qs, []) of
         {ok, Qs1} ->
@@ -138,7 +138,7 @@ resolve_query_functions(Qs, T) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec flatten_step([statement()], time()) ->
-                          {ok, [query_stmt()]}.
+                          {ok, [query_stmt()], pos_integer()}.
 flatten_step(Qs, T) ->
     Qs1 = [flatten(Q) || Q <- Qs],
     dqe_lib:pdebug('parse', "Query flattened.", []),
@@ -150,7 +150,7 @@ flatten_step(Qs, T) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec expand([flat_stmt()], time()) ->
-                    {'ok',[query_stmt()]}.
+                    {'ok',[query_stmt()], pos_integer()}.
 expand(Qs, T) ->
     Qs1 = [expand(Q) || Q <- Qs],
     Qs2 = lists:flatten(Qs1),
@@ -163,21 +163,23 @@ expand(Qs, T) ->
 %%--------------------------------------------------------------------
 -spec get_resolution([flat_stmt()], time()) ->
                             %% {error, term()} |
-                            {'ok',[{named, binary(), flat_stmt()}]}.
+                            {'ok',[{named, binary(), flat_stmt()}],
+                             pos_integer()}.
 get_resolution(Qs, T) ->
     {Qs1, _, _} = lists:foldl(fun get_resolution_fn/2,
                            {[], T, #{}}, Qs),
     Qs2 = lists:reverse(Qs1),
-    propagate_resolutions(Qs2).
+    propagate_resolutions(Qs2, T).
 
 %%--------------------------------------------------------------------
 %% @private
 %% @doc calculate resolutions for the whole call stack.
 %% @end
 %%--------------------------------------------------------------------
-propagate_resolutions(Qs) ->
+propagate_resolutions(Qs, T) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
-    {ok, Qs1}.
+    {Start, _End} = compute_se(apply_times(T, 1), 1000),
+    {ok, Qs1, Start}.
 
 %%%===================================================================
 %%% Internal functions
@@ -401,7 +403,6 @@ get_times_({calc, Chain,
                     F1 = F#{args => A1,
                             resolution => Rms1},
                     Comb1 = {combine, F1, Elements2},
-                    
                     Calc1 = {calc, Chain, Comb1},
                     {ok, apply_times(Calc1), BR};
                 _Error ->
@@ -439,13 +440,11 @@ bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
 
 %%--------------------------------------------------------------------
 %% @doc Fetch the resolution of a bucket from DDB
-%% @TODO: We need the call for this! right now returning a flat 1000
 %% @end
 %%--------------------------------------------------------------------
 -spec get_br(binary()) -> {ok, pos_integer()}.
-get_br(_Bucket) ->
-    {ok, 1000}.
-
+get_br(Bucket) ->
+    ddb_connection:resolution(Bucket).
 
 %%--------------------------------------------------------------------
 %% @doc Resolves constatns to their numberic representation
