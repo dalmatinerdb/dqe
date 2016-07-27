@@ -250,7 +250,7 @@ prop_prepare() ->
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case ?P:prepare(Unparsed) of
-                           {ok, _} ->
+                           {ok, _, _} ->
                                true;
                            {error, E} ->
                                io:format(user, "   ~p~n-> ~p~n-> ~p~n",
@@ -265,7 +265,7 @@ prop_dflow_prepare() ->
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case dqe:prepare(Unparsed) of
-                           {ok, _} ->
+                           {ok, _, _} ->
                                true;
                            {error, E} ->
                                io:format(user, "   ~p~n-> ~p~n-> ~p~n",
@@ -280,6 +280,10 @@ mock() ->
     meck:expect(ddb_connection, list,
                 fun (_) ->
                         {ok, [dproto:metric_from_list([<<"a">>])]}
+                end),
+    meck:expect(ddb_connection, resolution,
+                fun (_) ->
+                        {ok, 1000}
                 end),
     meck:expect(ddb_connection, list,
                 fun (_, Prefix) ->
