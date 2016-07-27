@@ -49,8 +49,8 @@ done(_Child, State = #state{aggr = Aggr, time = Time, acc = Acc}) ->
     {done, {realized, {Data, State#state.resolution}}, State#state{acc = <<>>}}.
 
 
-execute(Aggr, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * 9 ->
-    MinSize = T1 * ?DATA_SIZE,
+execute(Aggr, Acc, T1, AccEmit) when byte_size(Acc) >= T1 * ?RDATA_SIZE ->
+    MinSize = T1 * ?RDATA_SIZE,
     <<Data:MinSize/binary, Acc1/binary>> = Acc,
     Result = mmath_aggr:Aggr(Data, T1),
     execute(Aggr, Acc1, T1, <<AccEmit/binary, Result/binary>>);

@@ -9,6 +9,9 @@ apply_times(T, R)  when is_integer(T) ->
 apply_times(T, R) ->
     erlang:max(1, to_ms(T) div R).
 
+to_ms(#{op := time, args := [N, U]}) ->
+    to_ms({time, N, U});
+
 to_ms(T) when is_integer(T) ->
     T;
 to_ms({time, N, ms}) ->

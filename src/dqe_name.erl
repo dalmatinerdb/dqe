@@ -14,13 +14,11 @@ init([Name, SubQ]) ->
 describe(#state{name = Name}) ->
     Name.
 
-start({_Start, _Count}, State) ->
+start(_, State) ->
     {ok, State}.
 
-emit(_C, {realized, {Data, Resolution}}, State = #state{name = Name}) ->
-    {emit, {realized, {Name, Data, Resolution}}, State}.
+emit(_C, Data, State = #state{name = Name}) ->
+    {emit, {Name, Data}, State}.
 
 done(_Child, State) ->
     {done, State}.
-
-

@@ -45,7 +45,7 @@ add_to_tree(Term, Data, Tree) ->
         none ->
             gb_trees:insert(Term, {Data, 1}, Tree);
         {value, {Sum, Count}} ->
-            Sum1 = mmath_comb:sum_r([Sum, Data]),
+            Sum1 = mmath_comb:sum([Sum, Data]),
             gb_trees:update(Term, {Sum1, Count+1}, Tree)
     end.
 
