@@ -1,7 +1,6 @@
 -module(dql).
 
 -export([prepare/1]).
-
 -ifdef(TEST).
 -export([parse/1]).
 -endif.
@@ -178,7 +177,7 @@ get_resolution(Qs, T) ->
 %%--------------------------------------------------------------------
 propagate_resolutions(Qs, T) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
-    {Start, _End} = compute_se(apply_times(T, 1), 1000),
+    {Start, _End} = compute_se(apply_times(T, 1000), 1),
     {ok, Qs1, Start}.
 
 %%%===================================================================
