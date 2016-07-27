@@ -177,7 +177,7 @@ get_resolution(Qs, T) ->
 %%--------------------------------------------------------------------
 propagate_resolutions(Qs, T) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
-    {Start, _End} = compute_se(apply_times(T, 1000), 1),
+    {Start, _End} = compute_se(apply_times(T, 1000), 1000),
     {ok, Qs1, Start}.
 
 %%%===================================================================
