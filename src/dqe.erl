@@ -39,7 +39,8 @@ init() ->
                 dqe_max,
                 dqe_min,
                 dqe_sum_aggr,
-                dqe_derivate
+                dqe_derivate,
+                dqe_confidence
                ],
     CombFuns = [
                 dqe_sum_comb
