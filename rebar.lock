@@ -1,6 +1,6 @@
 [{<<"cf">>,{pkg,<<"cf">>,<<"0.2.1">>},2},
  {<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.1.24">>},1},
- {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.3">>},0},
+ {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.5">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.5">>},0},
  {<<"dproto">>,{pkg,<<"dproto">>,<<"0.1.19">>},0},
  {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.1">>},0},
