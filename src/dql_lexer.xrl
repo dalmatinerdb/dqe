@@ -74,6 +74,7 @@ Rules.
 
 Erlang code.
 
+-include_lib("eunit/include/eunit.hrl").
 -ignore_xref([format_error/1, string/2, token/2, token/3, tokens/2, tokens/3]).
 -dialyzer({nowarn_function, yyrev/2}).
 
@@ -85,3 +86,18 @@ a(L) -> list_to_atom(L).
 i(L) -> list_to_integer(L).
 f(L) -> list_to_float(L).
 b(L) -> list_to_binary(L).
+
+part_test_() ->
+    [?_assertEqual({ok, [{part, 1, <<"base">>}], 1},
+                   dql_lexer:string("'base'")),
+     ?_assertEqual({ok, [{part, 1, <<"'quoted'">>}], 1},
+                   dql_lexer:string("'\\'quoted\\''")),
+     ?_assertEqual({ok, [{part, 1, <<$\\, "at_beginning">>}], 1},
+                   dql_lexer:string("'\\\\at_beginning'")),
+     ?_assertEqual({ok, [{part, 1, <<"at_end", $\\>>}], 1},
+                   dql_lexer:string("'at_end\\\\'")),
+     ?_assertEqual({ok, [{part, 1, <<"c:\\">>},
+                         {'.', 1},
+                         {part, 1, <<"size">>}], 1},
+                   dql_lexer:string("'c:\\\\'.'size'"))
+    ].
