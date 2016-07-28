@@ -65,7 +65,7 @@ Rules.
                 {token, {date,          TokenLine, S}}.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
 [(),.*/=:]  :   {token, {a(TokenChars), TokenLine}}.
-{PVAR}      :   {token, {pvar,          b(strip_var(TokenChars))}}.
+{PVAR}      :   {token, {pvar,          i(strip_var(TokenChars))}}.
 {QVAR}      :   {token, {var,           b(strip_var(TokenChars, TokenLen))}}.
 {VAR}       :   {token, {var,           b(strip_var(TokenChars))}}.
 {WS}+       :   skip_token.
@@ -79,8 +79,8 @@ Erlang code.
 strip(TokenChars,TokenLen) ->
     S = lists:sublist(TokenChars, 2, TokenLen - 2),
     re:replace(S, "\\\\(.)", "\\1", [global, {return, list}]).
-strip_var([$ | R]) -> R.
-strip_var([$ | R], Len) -> strip(R, Len - 1).
+strip_var([$$ | R]) -> R.
+strip_var([$$ | R], Len) -> strip(R, Len - 1).
 
 a(L) -> list_to_atom(L).
 i(L) -> list_to_integer(L).

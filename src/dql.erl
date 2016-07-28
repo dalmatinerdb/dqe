@@ -179,7 +179,28 @@ get_resolution(Qs, T) ->
 propagate_resolutions(Qs, T) ->
     Qs1 = [apply_times(Q) || Q <- Qs],
     {Start, _End} = compute_se(apply_times(T, 1000), 1000),
+    apply_names(Qs1, Start).
+
+apply_names(Qs, Start) ->
+    Qs1 = [update_name(Q) || Q <- Qs],
     {ok, Qs1, Start}.
+
+update_name({named, {pvar, N}, C} = Q) ->
+    io:format("~p~n", [Q]),
+    Path = extract_path(C),
+    Name = lists:nth(N, Path),
+    {named, Name, C};
+
+update_name({named, _N, _C} = Q) ->
+    io:format("~p~n", [Q]),
+    Q.
+
+extract_path(#{op := get, args := [_,_,_,_,Path]}) ->
+    Path;
+extract_path({calc, _, G}) ->
+    extract_path(G).
+
+
 
 %%%===================================================================
 %%% Internal functions
