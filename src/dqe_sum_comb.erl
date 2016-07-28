@@ -22,5 +22,5 @@ describe(#state{}) ->
 spec() ->
     {<<"sum">>, [], metric, metric}.
 
-run([Datas], S) ->
+run(Datas, S) ->
     {mmath_comb:sum(Datas), S}.
