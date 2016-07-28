@@ -1,6 +1,5 @@
 -module(dql).
 
-%-export([prepare/1, compute_se/2, apply_times/2]).
 -export([prepare/1]).
 -ifdef(TEST).
 -export([parse/1]).
@@ -32,8 +31,8 @@
         #{op => get, args => [[binary()] | non_neg_integer()]} |
         #{op => sget, args => [[binary() | '*'] | non_neg_integer()]}.
 
-
 -type query_part() :: cmb_stmt() | flat_stmt().
+
 -type cmb_stmt() ::
         {combine, dqe_fun(), [statement()] | get_stmt()}.
 
@@ -49,6 +48,7 @@
         {calc, [dqe_fun()], flat_terminal() | get_stmt()}.
 
 -type named() :: #{op => named, args => [binary() | flat_stmt()]}.
+
 -type query_stmt() :: {named, binary(), flat_stmt()}.
 
 -type parser_error() ::
@@ -83,7 +83,7 @@ prepare(S) ->
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc Extrat the alises from all query parts
+%% @doc Extract the alises from all query parts
 %% @end
 %%--------------------------------------------------------------------
 -spec extract_aliases([statement()], time(), [term()]) ->
@@ -109,7 +109,7 @@ resolve_aliases(Qs, T, Aliases) ->
     {QQ, _AliasesQ} =
         lists:foldl(fun(Q, {QAcc, AAcc}) ->
                             {Q1, A1} = resolve_aliases(Q, AAcc),
-                            {[Q1 | QAcc] , A1}
+                            {[Q1 | QAcc], A1}
                     end, {[], Aliases}, Qs),
     dqe_lib:pdebug('parse', "Preprocessor done.", []),
     QQ1 = lists:reverse(QQ),
@@ -241,7 +241,10 @@ get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
 %% @doc Resolves the aliases
 %% @end
 %%--------------------------------------------------------------------
-resolve_aliases(O = #{op   := fcall,
+-spec resolve_aliases(statement(), gb_trees:tree()) -> {term(),
+                                                        gb_trees:tree()}.
+
+resolve_aliases(O = #{op  := fcall,
                      args := Args = #{inputs := Input}},
                Aliases) ->
     {Input1, A1} =
@@ -395,7 +398,7 @@ get_times_({calc, Chain,
             case lists:usort(Rmss) of
                 [{ok, Rms}] ->
                     Elements2 = lists:reverse(Elements1),
-                    Cs1 = [map_costants(C) || C <- Cs],
+                    Cs1 = [map_constants(C) || C <- Cs],
                     State = FMod:init(Cs1),
                     {Chunk, State1} = FMod:resolution(Rms, State),
                     Rms1 = Rms * Chunk,
@@ -447,16 +450,16 @@ get_br(Bucket) ->
     ddb_connection:resolution(Bucket).
 
 %%--------------------------------------------------------------------
-%% @doc Resolves constatns to their numberic representation
+%% @doc Resolves constants to their numeric representation
 %% @end
 %%--------------------------------------------------------------------
-map_costants(T = #{op := time}) ->
+map_constants(T = #{op := time}) ->
     dqe_time:to_ms(T);
-map_costants(#{op := integer, args := [N]}) ->
+map_constants(#{op := integer, args := [N]}) ->
     N;
-map_costants(#{op := float, args := [N]}) ->
+map_constants(#{op := float, args := [N]}) ->
     N;
-map_costants(E) ->
+map_constants(E) ->
     E.
 
 %%--------------------------------------------------------------------
@@ -501,7 +504,7 @@ time_walk_chain([], _Rms, Acc) ->
 time_walk_chain([E = #{op := fcall,
                        args := A = #{mod := FMod, constants := Cs}} | R],
                 Rms, Acc) ->
-    Cs1 = [map_costants(C) || C <- Cs],
+    Cs1 = [map_constants(C) || C <- Cs],
     State = FMod:init(Cs1),
     {Chunk, State1} = FMod:resolution(Rms, State),
     Rms1 = Rms * Chunk,
