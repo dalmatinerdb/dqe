@@ -33,7 +33,7 @@ select -> kw_select funs kw_alias aliases timeframe : {select, '$2', '$4', '$5'}
 funs -> fune : ['$1'].
 funs -> fune ',' funs : ['$1'] ++ '$3'.
 
-%% Element in the funciton list, either a calculatable or a calculatable
+%% Element in the function list, either a calculatable or a calculatable
 %% with a name
 fune -> calculatable kw_as part_or_name : named('$3', '$1').
 fune -> calculatable : '$1'.

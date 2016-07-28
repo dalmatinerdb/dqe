@@ -109,7 +109,7 @@ resolve_aliases(Qs, T, Aliases) ->
     {QQ, _AliasesQ} =
         lists:foldl(fun(Q, {QAcc, AAcc}) ->
                             {Q1, A1} = resolve_aliases(Q, AAcc),
-                            {[Q1 | QAcc] , A1}
+                            {[Q1 | QAcc], A1}
                     end, {[], Aliases}, Qs),
     dqe_lib:pdebug('parse', "Preprocessor done.", []),
     QQ1 = lists:reverse(QQ),
@@ -241,7 +241,10 @@ get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
 %% @doc Resolves the aliases
 %% @end
 %%--------------------------------------------------------------------
-resolve_aliases(O = #{op   := fcall,
+-spec resolve_aliases(statement(), gb_trees:tree()) -> {term(),
+                                                        gb_trees:tree()}.
+
+resolve_aliases(O = #{op  := fcall,
                      args := Args = #{inputs := Input}},
                Aliases) ->
     {Input1, A1} =
