@@ -38,10 +38,10 @@ funs -> fune ',' funs : ['$1'] ++ '$3'.
 fune -> calculatable kw_as as_clause : named('$3', '$1').
 fune -> calculatable : '$1'.
 
-
-as_part -> part_or_name : '$1'.
-as_part -> pvar         : '$1'.
-as_part -> dvar         : '$1'.
+as_part -> part_or_name          : '$1'.
+as_part -> dvar ':' part_or_name : {dvar, {unwrap('$1'), '$3'}}.
+as_part -> dvar                  : {dvar, {<<>>, unwrap('$1')}}.
+as_part -> pvar                  : '$1'.
 
 as_clause -> as_part               : ['$1'].
 as_clause -> as_part '.' as_clause : ['$1'] ++ '$3'.

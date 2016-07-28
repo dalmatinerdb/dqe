@@ -199,7 +199,7 @@ update_name({named, _N, _C} = Q) ->
 
 
 update_name_element({dvar, N}, _Path, Gs) ->
-    io:format("~s < ~p~n", [N, Gs]),
+    io:format("~p < ~p~n", [N, Gs]),
     {_, Name} = lists:keyfind(N, 1, Gs),
     Name;
 update_name_element({pvar, N}, Path, _Gs) ->
