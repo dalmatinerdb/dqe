@@ -66,8 +66,8 @@ Rules.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
 [(),.*/=:]  :   {token, {a(TokenChars), TokenLine}}.
 {PVAR}      :   {token, {pvar,          i(strip_var(TokenChars))}}.
-{QVAR}      :   {token, {var,           b(strip_var(TokenChars, TokenLen))}}.
-{VAR}       :   {token, {var,           b(strip_var(TokenChars))}}.
+{QVAR}      :   {token, {dvar,          b(strip_var(TokenChars, TokenLen))}}.
+{VAR}       :   {token, {dvar,          b(strip_var(TokenChars))}}.
 {WS}+       :   skip_token.
 
 Erlang code.

@@ -9,7 +9,7 @@ infix mfrom var metric where where_part.
 Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
-kw_after kw_before kw_for kw_where kw_alias pvar.
+kw_after kw_before kw_for kw_where kw_alias pvar dvar.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -37,6 +37,7 @@ funs -> fune ',' funs : ['$1'] ++ '$3'.
 %% with a name
 fune -> calculatable kw_as part_or_name : named('$3', '$1').
 fune -> calculatable kw_as pvar         : named('$3', '$1').
+fune -> calculatable kw_as dvar         : named('$3', '$1').
 fune -> calculatable : '$1'.
 
 %% Something that can be calculated:
