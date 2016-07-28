@@ -185,16 +185,10 @@ apply_names(Qs, Start) ->
     Qs1 = [update_name(Q) || Q <- Qs],
     {ok, Qs1, Start}.
 
-update_name({named, {pvar, N}, C}) ->
-    Path = extract_path(C),
-    Name = lists:nth(N, Path),
-    {named, Name, C};
-
-update_name({named, {dvar, N}, C}) ->
-    Gs = extract_groupings(C),
-    {_, Name} = lists:keyfind(N, 1, Gs),
-    {named, Name, C};
-
+update_name({named, L, C}) when is_list(L)->
+    {Path, Gs} = extract_path_and_groupings(C),
+    Name = [update_name_element(N, Path, Gs) || N <- L],
+    {named, dql_unparse:unparse_metric(Name), C};
 
 update_name({named, _N, _C} = Q) when is_binary(_N) ->
     Q;
@@ -203,17 +197,31 @@ update_name({named, _N, _C} = Q) ->
     io:format("~p~n", [Q]),
     Q.
 
-extract_path(#{op := get, args := [_,_,_,_,Path]}) when is_list(Path) ->
-    Path;
-extract_path(#{op := get, args := [_,_,_,_,Path]}) when is_binary(Path) ->
-    dproto:metric_to_list(Path);
-extract_path({calc, _, G}) ->
-    extract_path(G).
 
-extract_groupings(#{op := get, groupings := Gs}) ->
+update_name_element({dvar, N}, _Path, Gs) ->
+    io:format("~s < ~p~n", [N, Gs]),
+    {_, Name} = lists:keyfind(N, 1, Gs),
+    Name;
+update_name_element({pvar, N}, Path, _Gs) ->
+    lists:nth(N, Path);
+update_name_element(N, _, _) ->
+    N.
+
+extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
+  when is_list(Path) ->
+    io:format("~p~n", [G]),
+    {Path, extract_groupings(G)};
+extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
+  when is_binary(Path) ->
+    io:format("~p~n", [G]),
+    {dproto:metric_to_list(Path), extract_groupings(G)};
+extract_path_and_groupings({calc, _, G}) ->
+    extract_path_and_groupings(G).
+
+extract_groupings(#{groupings := Gs}) ->
     Gs;
-extract_groupings({calc, _, G}) ->
-    extract_groupings(G).
+extract_groupings(_) ->
+    [].
 
 
 
@@ -612,8 +620,9 @@ flatten(Get = #{op := sget},
 expand(Q) ->
     expand_grouped(Q, []).
 
-expand_grouped(Q = #{op := named, args := [{dvar, N}, S]}, Groupings) ->
-    [Q#{args => [{dvar, N}, S1]} || S1 <- expand_grouped(S, [N | Groupings])];
+expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
+    Gs = [N || {dvar, N} <- L],
+    [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];
 
 expand_grouped(Q = #{op := named, args := [N, S]}, Groupings) ->
     [Q#{args => [N, S1]} || S1 <- expand_grouped(S, Groupings)];

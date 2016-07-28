@@ -2,7 +2,7 @@
 Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
-infix mfrom var metric where where_part.
+infix mfrom var metric where where_part as_part as_clause.
 
 %% hist  calculatables.
 
@@ -35,10 +35,16 @@ funs -> fune ',' funs : ['$1'] ++ '$3'.
 
 %% Element in the function list, either a calculatable or a calculatable
 %% with a name
-fune -> calculatable kw_as part_or_name : named('$3', '$1').
-fune -> calculatable kw_as pvar         : named('$3', '$1').
-fune -> calculatable kw_as dvar         : named('$3', '$1').
+fune -> calculatable kw_as as_clause : named('$3', '$1').
 fune -> calculatable : '$1'.
+
+
+as_part -> part_or_name : '$1'.
+as_part -> pvar         : '$1'.
+as_part -> dvar         : '$1'.
+
+as_clause -> as_part               : ['$1'].
+as_clause -> as_part '.' as_clause : ['$1'] ++ '$3'.
 
 %% Something that can be calculated:
 %% * a function that can be resolved
