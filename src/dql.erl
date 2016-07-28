@@ -88,7 +88,7 @@ prepare(S) ->
 %%--------------------------------------------------------------------
 -spec extract_aliases([statement()], time(), [term()]) ->
                      {error, term()} |
-                     {ok, [query_stmt()], pos_integer(), gb_trees:tree()}.
+                     {ok, [query_stmt()], pos_integer()}.
 extract_aliases(Qs, T, Aliases) ->
     AliasesF =
         lists:foldl(fun({alias, Alias, Res}, AAcc) ->
