@@ -2,7 +2,7 @@
 %%% @author Heinz Nikolaus Gies <heinz@licenser.net>
 %%% @copyright (C) 2014, Heinz Nikolaus Gies
 %%% @doc This is the DalmatinerDB query engine, it is run as part of
-%%% the dalmatinerDB frontend but can be embedded in other applications
+%%% the DalmatinerDB frontend but can be embedded in other applications
 %%% just as well.
 %%%
 %%% @end
@@ -17,12 +17,12 @@
                          Resolution :: pos_integer()}].
 
 -type query_error() :: {'error', 'no_results' |
-                        'significant_figures' |
-                        'resolution_conflict' |
+                        %% 'significant_figures' |
+                        %% 'resolution_conflict' |
                         'timeout' |
                         binary() |
-                        {not_found, binary(), [atom()]} |
-                        {'not_found',{binary(), binary()}}}.
+                        %% {'not_found',{binary(), binary()}} |
+                        {'not_found', binary(), [atom()]}}.
 
 %%%===================================================================
 %%% API
@@ -58,7 +58,7 @@ error_string({error, {not_found, {var, Name}}}) ->
     ["Variable '", Name, "' referenced but not defined!"];
 
 error_string({error, {not_found, {glob, Glob}}}) ->
-    ["No series is matching ", dqe_lib:glob_to_string(Glob), "!"];
+    ["No series matches ", dqe_lib:glob_to_string(Glob), "!"];
 
 error_string({error, no_results}) ->
     "No results were returned for the query.";
@@ -79,8 +79,8 @@ error_string({error, B}) when is_binary(B) ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string()) ->
-                 {'ok', pos_integer(), query_reply()} |
-                 query_error().
+                 query_error() |
+                 {ok, Start::pos_integer(), query_reply()}.
 run(Query) ->
     run(Query, infinity).
 
@@ -94,7 +94,7 @@ run(Query) ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string(), Timeout :: pos_integer() | infinity) ->
-                 {error, _} |
+                 query_error() |
                  {ok, Start::pos_integer(), query_reply()}.
 
 run(Query, Timeout) ->
@@ -141,15 +141,17 @@ run(Query, Timeout) ->
 
 %%--------------------------------------------------------------------
 %% @doc Prepares query exeuction, this can be used of the query is
-%% desired to be executed asyncrounously instead of using {@link run/2}
+%% to be executed asynchronously instead of using {@link run/2}.
 %%
 %% @end
 %%--------------------------------------------------------------------
 
 -spec prepare(Query :: string()) ->
-                     {ok, {DFlows :: [dflow:step()],
-                           Start :: pos_integer(),
-                           Count :: pos_integer()}} |
+                     {ok, {Total  :: pos_integer(),
+                           Unique :: pos_integer(),
+                           Count  :: pos_integer(),
+                           DFlows :: [dflow:step()]},
+                        Start :: pos_integer()} |
                      {error, _}.
 
 prepare(Query) ->
@@ -160,7 +162,7 @@ prepare(Query) ->
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
                            [Total, Unique]),
             {ok, Parts1} = add_collect(Parts, []),
-            dqe_lib:pdebug('prepare', "Naing applied.", []),
+            dqe_lib:pdebug('prepare', "Naming applied.", []),
             {ok, {Total, Unique, Parts1}, Start};
         E ->
             io:format("E: ~p~n", [E]),
@@ -173,7 +175,9 @@ prepare(Query) ->
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc Wrap the query in a collect dflow.
+%% @doc Wrap the query in a collect dflow, where get operations become
+%% `dqe_get' flows and function applications become either
+%% `dqe_fun_list_flow' or `dqe_fun_flow' flows.
 %% @end
 %%--------------------------------------------------------------------
 -spec add_collect([dql:query_stmt()], [dflow:step()]) -> {ok, [dflow:step()]}.
@@ -188,7 +192,7 @@ add_collect([], Acc) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc Counts how many total and unique get's are performed, this is
-%% used to dertermine of we want to optimize the query or not.
+%% used to determine of we want to optimize the query or not.
 %% @end
 %%--------------------------------------------------------------------
 -spec count_parts([dql:query_stmt()]) ->
@@ -204,6 +208,8 @@ count_parts(Parts) ->
 %% @private
 %% @doc Extracts the buckets and metrics we get get from a query.
 %% used to dertermine of we want to optimize the query or not.
+%% At this point, wildcards would have been resolved, therefore `sget'
+%% operations are not handled.
 %% @end
 %%--------------------------------------------------------------------
 -spec extract_gets(dql:flat_stmt()) ->
@@ -232,7 +238,7 @@ translate({calc, [], G}) ->
 translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
     FoldFn = fun(#{op := fcall,
                    args := #{
-                         mod := Mod,
+                     mod := Mod,
                      state := State
                     }}, Acc) ->
                      {dqe_fun_flow, [Mod, State, Acc]}
