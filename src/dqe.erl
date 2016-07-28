@@ -17,12 +17,12 @@
                          Resolution :: pos_integer()}].
 
 -type query_error() :: {'error', 'no_results' |
-                        %% 'significant_figures' |
-                        %% 'resolution_conflict' |
+                        'significant_figures' |
+                        'resolution_conflict' |
                         'timeout' |
                         binary() |
-                        %% {'not_found',{binary(), binary()}} |
-                        {'not_found', binary(), [atom()]}}.
+                        {not_found, binary(), [atom()]} |
+                        {'not_found',{binary(), binary()}}}.
 
 %%%===================================================================
 %%% API
@@ -79,8 +79,8 @@ error_string({error, B}) when is_binary(B) ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string()) ->
-                 query_error() |
-                 {ok, Start::pos_integer(), query_reply()}.
+                 {'ok', pos_integer(), query_reply()} |
+                 query_error().
 run(Query) ->
     run(Query, infinity).
 
@@ -94,7 +94,7 @@ run(Query) ->
 %%--------------------------------------------------------------------
 
 -spec run(Query :: string(), Timeout :: pos_integer() | infinity) ->
-                 query_error() |
+                 {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
 
 run(Query, Timeout) ->
