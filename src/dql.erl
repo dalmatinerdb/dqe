@@ -520,7 +520,13 @@ time_walk_chain([E | R], Rms, Acc) ->
 -spec flatten(dqe_fun() | get_stmt()) ->
                      #{op => named, args => [binary() | flat_stmt()]}.
 flatten(#{op := named, args := [N, Child]}) ->
-    C = #{return := R} = flatten(Child, []),
+    {C, R} = case flatten(Child, []) of
+                 Cx = {calc, [#{return := Rx} | _], _} ->
+                     {Cx, Rx};
+                 Cx = {calc, [], #{return := Rx}} ->
+                     {Cx, Rx}
+             end,
+
     #{
        op => named,
        args => [N, C],
