@@ -435,6 +435,10 @@ get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
 -spec get_times_(flat_stmt(), time(), #{}) ->
                         {ok, flat_stmt(), #{}} |
                         {error, resolution_conflict}.
+get_times_(S = #{op := timeshift, args := [Shift, C]}, T, BucketResolutions) ->
+    T1 = S#{args := [Shift, T]},
+    get_times_(C, T1, BucketResolutions);
+
 get_times_({calc, Chain,
             {combine,
              F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
@@ -585,6 +589,10 @@ get_type({combine, F, _}) ->
 
 -spec flatten(dqe_fun() | get_stmt()) ->
                      #{op => named, args => [binary() | flat_stmt()]}.
+flatten(#{op := timeshift, args := [Time, Child]}) ->
+    #{ args := [N, C]} = R = flatten(Child),
+    R#{args := [N, #{op => timeshift, args => [Time, C],
+                     return => get_type(C)}]};
 flatten(#{op := named, args := [N, Child]}) ->
     C = flatten(Child, []),
     R = get_type(C),
@@ -607,7 +615,8 @@ flatten(Child = #{return := R}) ->
 
 -spec flatten(statement(), [dqe_fun()]) ->
                      flat_stmt().
-
+%% flatten(#{op := timeshift, args := [_Time, Child]}, []) ->
+    
 flatten(F = #{op   := fcall,
               args := Args = #{inputs := [Child]}}, Chain) ->
     Args1 = maps:remove(inputs, Args),
@@ -643,6 +652,9 @@ expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
 
 expand_grouped(Q = #{op := named, args := [N, S]}, Groupings) ->
     [Q#{args => [N, S1]} || S1 <- expand_grouped(S, Groupings)];
+
+expand_grouped(Q = #{op := timeshift, args := [T, S]}, Groupings) ->
+    [Q#{args => [T, S1]} || S1 <- expand_grouped(S, Groupings)];
 
 expand_grouped({calc, Fs, Q}, Groupings) ->
     [{calc, Fs, Q1} || Q1 <- expand_grouped(Q, Groupings)];
@@ -699,6 +711,11 @@ compute_se(#{ op := last, args := [N]}, Rms) ->
 
 compute_se(#{op := before, args := [E, D]}, _Rms) ->
     {E - D, D};
+
+compute_se(#{op := timeshift, args := [Shift, T]}, Rms) ->
+    {S, D} = compute_se(T, Rms),
+    {S - Shift, D};
+
 compute_se(#{op :='after', args := [S, D]}, _Rms) ->
     {S, D}.
 
@@ -714,6 +731,12 @@ apply_times(#{op := 'after', args := [S, D]}, R) ->
 apply_times(#{op := before, args := [E, D]}, R) ->
     #{op => before, args => [apply_times(E, R), apply_times(D, R)]};
 
+apply_times(#{op := timeshift, args := [Shift, T]}, R) ->
+    T1 = apply_times(T, R),
+    S1 = apply_times(Shift, R),
+    #{op => timeshift, args => [S1, T1]};
+
+
 apply_times(N, _) when is_integer(N) ->
     erlang:max(1, N);
 
@@ -724,6 +747,7 @@ apply_times(now, R) ->
 apply_times(#{op := ago, args := [T]}, R) ->
     NowMs = erlang:system_time(milli_seconds),
     erlang:min(1, (NowMs - dqe_time:to_ms(T)) div R);
+
 
 apply_times(T, R) ->
     erlang:max(1, dqe_time:to_ms(T) div R).

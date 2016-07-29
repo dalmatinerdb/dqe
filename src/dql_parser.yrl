@@ -2,14 +2,15 @@
 Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
-infix mfrom var metric where where_part as_part as_clause.
+infix mfrom var metric where where_part as_part as_clause perhaps_shifted.
 
 %% hist  calculatables.
 
 Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
-kw_after kw_before kw_for kw_where kw_alias pvar dvar.
+kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
+kw_by.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -30,8 +31,12 @@ select -> kw_select funs kw_alias aliases timeframe : {select, '$2', '$4', '$5'}
 %%%===================================================================
 
 %% List of functions in the select part of the statement
-funs -> fune : ['$1'].
-funs -> fune ',' funs : ['$1'] ++ '$3'.
+funs -> perhaps_shifted : ['$1'].
+funs -> perhaps_shifted ',' funs : ['$1'] ++ '$3'.
+
+perhaps_shifted -> fune kw_shift kw_by int_or_time : #{op        => timeshift,
+                                                       args      => ['$4', '$1']}.
+perhaps_shifted -> fune : '$1'.
 
 %% Element in the function list, either a calculatable or a calculatable
 %% with a name
