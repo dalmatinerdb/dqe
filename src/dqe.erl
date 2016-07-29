@@ -235,7 +235,7 @@ translate({calc, [], G}) ->
     translate(G);
 
 %% TODO we can do this better!
-translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
+translate({calc, Aggrs, G}) ->
     FoldFn = fun(#{op := fcall,
                    args := #{
                      mod := Mod,
@@ -243,6 +243,7 @@ translate({calc, [#{resolution := R} | _] = Aggrs, G}) ->
                     }}, Acc) ->
                      {dqe_fun_flow, [Mod, State, Acc]}
              end,
+    #{resolution := R} = lists:last(Aggrs),
     {ok, _R, G1} = translate(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 

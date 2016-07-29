@@ -162,14 +162,17 @@ expand(Qs, T) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec get_resolution([flat_stmt()], time()) ->
-                            %% {error, term()} |
+                            {error, term()} |
                             {'ok',[{named, binary(), flat_stmt()}],
                              pos_integer()}.
 get_resolution(Qs, T) ->
-    {Qs1, _, _} = lists:foldl(fun get_resolution_fn/2,
-                           {[], T, #{}}, Qs),
-    Qs2 = lists:reverse(Qs1),
-    propagate_resolutions(Qs2, T).
+    case lists:foldl(fun get_resolution_fn/2, {[], T, #{}}, Qs) of
+        {error, E} ->
+            {error, E};
+        {Qs1, _, _} ->
+            Qs2 = lists:reverse(Qs1),
+            propagate_resolutions(Qs2, T)
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -273,11 +276,20 @@ lexer_error(Line, E)  ->
 %% @end
 %%--------------------------------------------------------------------
 -spec get_resolution_fn(named(),
-                        {[named()], time(), #{}}) ->
-                               {[named()], time(), #{}}.
+                        {[named()], time(), #{}} |
+                        {error, resolution_conflict}) ->
+                               {[named()], time(), #{}} |
+                               {error,resolution_conflict}.
 get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
-    {ok, Q1, RAcc1} = get_times(Q, T, RAcc),
-    {[Q1 | QAcc], T, RAcc1}.
+    case get_times(Q, T, RAcc) of
+        {ok, Q1, RAcc1} ->
+            {[Q1 | QAcc], T, RAcc1};
+        {error, resolution_conflict} ->
+            {error, resolution_conflict}
+    end;
+get_resolution_fn(_, {error, resolution_conflict}) ->
+    {error, resolution_conflict}.
+
 
 %%--------------------------------------------------------------------
 %% @private
@@ -563,13 +575,16 @@ time_walk_chain([E | R], Rms, Acc) ->
 -spec flatten(dqe_fun() | get_stmt()) ->
                      #{op => named, args => [binary() | flat_stmt()]}.
 flatten(#{op := named, args := [N, Child]}) ->
-    {C, R} = case flatten(Child, []) of
-                 Cx = {calc, [#{return := Rx} | _], _} ->
-                     {Cx, Rx};
-                 Cx = {calc, [], #{return := Rx}} ->
-                     {Cx, Rx}
-             end,
-
+    C = flatten(Child, []),
+    R = case C of
+            #{return := Rx} ->
+                Rx;
+            {calc, [], #{return := Rx}} ->
+                Rx;
+            {calc, L, _} when is_list(L) ->
+                #{return := Rx} = lists:last(L),
+                Rx
+        end,
     #{
        op => named,
        args => [N, C],
