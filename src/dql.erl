@@ -189,6 +189,7 @@ apply_names(Qs, Start) ->
     {ok, Qs1, Start}.
 
 update_name({named, L, C}) when is_list(L)->
+    io:format("~p~n", [C]),
     {Path, Gs} = extract_path_and_groupings(C),
     Name = [update_name_element(N, Path, Gs) || N <- L],
     {named, dql_unparse:unparse_metric(Name), C};
@@ -201,6 +202,7 @@ update_name({named, _N, _C} = Q) ->
     Q.
 
 update_name_element({dvar, N}, _Path, Gs) ->
+    io:format("~p > ~p~n", [N, Gs]),
     {_, Name} = lists:keyfind(N, 1, Gs),
     Name;
 update_name_element({pvar, N}, Path, _Gs) ->
@@ -674,7 +676,7 @@ expand_grouped(Q = #{op := lookup,
              args := [Collection, Metric]}, Groupings) ->
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings),
     Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], grouping => lists:zip(Groupings, GVs)}
+    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
      || {Bucket, Key, GVs} <- BMs];
 
 expand_grouped(Q = #{op := sget,
