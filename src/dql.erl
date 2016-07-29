@@ -215,7 +215,10 @@ extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
   when is_binary(Path) ->
     {dproto:metric_to_list(Path), extract_groupings(G)};
 extract_path_and_groupings({calc, _, G}) ->
-    extract_path_and_groupings(G).
+    extract_path_and_groupings(G);
+
+extract_path_and_groupings({combine, F, _}) ->
+    {[], extract_groupings(F)}.
 
 extract_groupings(#{groupings := Gs}) ->
     Gs;
@@ -569,19 +572,20 @@ time_walk_chain([E | R], Rms, Acc) ->
     time_walk_chain(R, Rms, [E | Acc]).
 
 
+get_type(#{return := R}) ->
+    R;
+get_type({calc, [], C}) ->
+    get_type(C);
+get_type({calc, L, _}) when is_list(L) ->
+    get_type(lists:last(L));
+get_type({combine, F, _}) ->
+    get_type(F).
+
 -spec flatten(dqe_fun() | get_stmt()) ->
                      #{op => named, args => [binary() | flat_stmt()]}.
 flatten(#{op := named, args := [N, Child]}) ->
     C = flatten(Child, []),
-    R = case C of
-            #{return := Rx} ->
-                Rx;
-            {calc, [], #{return := Rx}} ->
-                Rx;
-            {calc, L, _} when is_list(L) ->
-                #{return := Rx} = lists:last(L),
-                Rx
-        end,
+    R = get_type(C),
     #{
        op => named,
        args => [N, C],
