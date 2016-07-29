@@ -1,2 +1,2 @@
-{build, "rebar3 as eqc eqc -n 1"}.
+{build, "./rebar3 as eqc eqc -n 1"}.
 {test_path, "_build/eqc/lib/dqe/ebin/"}.
