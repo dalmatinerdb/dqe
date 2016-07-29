@@ -341,6 +341,20 @@ resolve_functions(#{op := named, args := [N, Q], return := undefined}) ->
             E
     end;
 
+resolve_functions(#{op := timeshift, args := [S, Q]}) ->
+    case resolve_functions(Q) of
+        {ok, R = #{return := T}} ->
+            {ok, #{
+               op => timeshift,
+               args => [S, R],
+               signature => [integer, T],
+               return => T
+              }
+            };
+        E ->
+            E
+    end;
+
 resolve_functions(#{op := fcall, args := #{name   := Function,
                                            inputs := Args}}) ->
     case resolve_functions(Args, []) of
@@ -590,7 +604,7 @@ get_type({combine, F, _}) ->
 -spec flatten(dqe_fun() | get_stmt()) ->
                      #{op => named, args => [binary() | flat_stmt()]}.
 flatten(#{op := timeshift, args := [Time, Child]}) ->
-    #{ args := [N, C]} = R = flatten(Child),
+    #{args := [N, C]} = R = flatten(Child),
     R#{args := [N, #{op => timeshift, args => [Time, C],
                      return => get_type(C)}]};
 flatten(#{op := named, args := [N, Child]}) ->
@@ -616,7 +630,6 @@ flatten(Child = #{return := R}) ->
 -spec flatten(statement(), [dqe_fun()]) ->
                      flat_stmt().
 %% flatten(#{op := timeshift, args := [_Time, Child]}, []) ->
-    
 flatten(F = #{op   := fcall,
               args := Args = #{inputs := [Child]}}, Chain) ->
     Args1 = maps:remove(inputs, Args),
