@@ -1,5 +1,5 @@
 -module(dql_unparse).
--export([unparse/1]).
+-export([unparse/1, unparse_metric/1]).
 
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],

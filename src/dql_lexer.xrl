@@ -11,6 +11,10 @@ PART    = '(\\.|[^\'\\])+'
 DATE    = "(\\.|[^\"\\])+"
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
+PVAR    = [$][0-9]+
+QVAR    = [$]'([^']|\.)+'
+%'% damn you syntax highlighter
+VAR     = [$][A-Za-z0-9_@-]+
 WS      = ([\000-\s]|%.*)
 TIME    = (ms|s|m|h|d|w)
 SELECT  = [Ss][Ee][Ll][Ee][Cc][Tt]
@@ -50,16 +54,7 @@ Rules.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
 
-%% derivate    :   {token, {derivate,      TokenLine, a(TokenChars)}}.
-%% confidence  :   {token, {confidence,    TokenLine, a(TokenChars)}}.
-%% {MM}        :   {token, {mm,            TokenLine, a(TokenChars)}}.
-%% {AVG}       :   {token, {avg,           TokenLine, a(TokenChars)}}.
-%% {HFUN}      :   {token, {hfun,          TokenLine, a(TokenChars)}}.
-%% {MATH}      :   {token, {math,          TokenLine, a(TokenChars)}}.
-%% {CAGGR}     :   {token, {caggr,         TokenLine, a(TokenChars)}}.
 {TIME}      :   {token, {time,          TokenLine, a(TokenChars)}}.
-%% {HIST}      :   {token, {histogram,     TokenLine, a(TokenChars)}}.
-%% {PERC}      :   {token, {percentile,    TokenLine, a(TokenChars)}}.
 
 {Sign}{Digit}+ : {token, {integer,       TokenLine, i(TokenChars)}}.
 {Sign}{Float}  : {token, {float,         TokenLine, f(TokenChars)}}.
@@ -70,6 +65,9 @@ Rules.
                 {token, {date,          TokenLine, S}}.
 {S}         :   {token, {name,          TokenLine, b(TokenChars)}}.
 [(),.*/=:]  :   {token, {a(TokenChars), TokenLine}}.
+{PVAR}      :   {token, {pvar,          i(strip_var(TokenChars))}}.
+{QVAR}      :   {token, {dvar,          b(strip_var(TokenChars, TokenLen))}}.
+{VAR}       :   {token, {dvar,          b(strip_var(TokenChars))}}.
 {WS}+       :   skip_token.
 
 Erlang code.
@@ -81,6 +79,8 @@ Erlang code.
 strip(TokenChars,TokenLen) ->
     S = lists:sublist(TokenChars, 2, TokenLen - 2),
     re:replace(S, "\\\\(.)", "\\1", [global, {return, list}]).
+strip_var([$$ | R]) -> R.
+strip_var([$$ | R], Len) -> strip(R, Len - 1).
 
 a(L) -> list_to_atom(L).
 i(L) -> list_to_integer(L).
