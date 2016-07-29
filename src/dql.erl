@@ -197,11 +197,10 @@ update_name({named, _N, _C} = Q) when is_binary(_N) ->
     Q;
 
 update_name({named, _N, _C} = Q) ->
-    io:format("~p~n", [Q]),
+    io:format("Unkown named: ~p~n", [Q]),
     Q.
 
 update_name_element({dvar, N}, _Path, Gs) ->
-    io:format("~p < ~p~n", [N, Gs]),
     {_, Name} = lists:keyfind(N, 1, Gs),
     Name;
 update_name_element({pvar, N}, Path, _Gs) ->
@@ -211,11 +210,9 @@ update_name_element(N, _, _) ->
 
 extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
   when is_list(Path) ->
-    io:format("~p~n", [G]),
     {Path, extract_groupings(G)};
 extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
   when is_binary(Path) ->
-    io:format("~p~n", [G]),
     {dproto:metric_to_list(Path), extract_groupings(G)};
 extract_path_and_groupings({calc, _, G}) ->
     extract_path_and_groupings(G).
