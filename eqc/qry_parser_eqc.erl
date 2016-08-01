@@ -17,7 +17,6 @@ non_empty_binary() ->
 pos_int() ->
     ?SUCHTHAT(N, int(), N > 0).
 
-
 time_unit() ->
     oneof([ms, s, m, h, d, w]).
 
@@ -47,9 +46,9 @@ hfun() ->
 aliases() ->
     [].
 
-qry_tree() ->
+select_stmt() ->
     {select,
-     non_empty_list(?SIZED(Size, qry_tree(Size))),
+     non_empty_list(?SIZED(Size, maybe_shifted(Size))),
      aliases(),
      oneof([
             #{op => last, args => [pos_int()]},
@@ -133,6 +132,15 @@ sget_f() ->
       signature => [integer, integer, integer, glob, bucket],
       return    => metric
     }.
+
+maybe_shifted(S) ->
+    oneof([
+           qry_tree(S),
+           #{
+              op   => timeshift,
+              args => [time_type(), qry_tree(S)]
+            }
+          ]).
 
 qry_tree(S) when S < 1->
     oneof([
@@ -228,7 +236,7 @@ glob_element(Size) ->
           {[non_empty_string() | L], ["*" | G], M})).
 
 prop_qery_parse_unparse() ->
-    ?FORALL(T, qry_tree(),
+    ?FORALL(T, select_stmt(),
             begin
                 Unparsed = dql_unparse:unparse(T),
                 case ?P:parse(Unparsed) of
@@ -246,7 +254,7 @@ prop_qery_parse_unparse() ->
 
 prop_prepare() ->
     ?SETUP(fun mock/0,
-           ?FORALL(T, qry_tree(),
+           ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case ?P:prepare(Unparsed) of
@@ -261,7 +269,7 @@ prop_prepare() ->
 
 prop_dflow_prepare() ->
     ?SETUP(fun mock/0,
-           ?FORALL(T, qry_tree(),
+           ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case dqe:prepare(Unparsed) of

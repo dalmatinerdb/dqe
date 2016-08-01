@@ -41,6 +41,9 @@ unparse({select, Q, A, T}) ->
     <<"SELECT ", (unparse(Q))/binary, " ALIAS ", (unparse(A))/binary, " ",
       (unparse(T))/binary>>;
 
+unparse(#{op := timeshift, args := [T, Q]}) ->
+    <<(unparse(Q))/binary, " SHIFT BY ", (unparse(T))/binary>>;
+
 unparse(#{op := last, args := [Q]}) ->
     <<"LAST ", (unparse(Q))/binary>>;
 unparse(#{op := between, args := [A, B]}) ->
