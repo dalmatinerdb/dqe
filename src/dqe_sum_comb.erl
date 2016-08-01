@@ -27,4 +27,4 @@ run(Datas, S) ->
 
 help() ->
     <<"Combines multiple series into one by adding the values for each "
-      "time offset together">>.
+      "time offset together.">>.
