@@ -189,7 +189,6 @@ apply_names(Qs, Start) ->
     {ok, Qs1, Start}.
 
 update_name({named, L, C}) when is_list(L)->
-    io:format("~p~n", [C]),
     {Path, Gs} = extract_path_and_groupings(C),
     Name = [update_name_element(N, Path, Gs) || N <- L],
     {named, dql_unparse:unparse_metric(Name), C};
@@ -202,7 +201,6 @@ update_name({named, _N, _C} = Q) ->
     Q.
 
 update_name_element({dvar, N}, _Path, Gs) ->
-    io:format("~p > ~p~n", [N, Gs]),
     {_, Name} = lists:keyfind(N, 1, Gs),
     Name;
 update_name_element({pvar, N}, Path, _Gs) ->
@@ -219,8 +217,12 @@ extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
 extract_path_and_groupings({calc, _, G}) ->
     extract_path_and_groupings(G);
 
-extract_path_and_groupings({combine, F, _}) ->
-    {[], extract_groupings(F)}.
+%% If we find a combine we take the values of its first element
+%% for grouings all elements will have the same anyway and for
+%% pvars there is no 'right' answer so picking the first is
+%% as good as picking any other.
+extract_path_and_groupings({combine, _, [G | _]}) ->
+    extract_path_and_groupings(G).
 
 extract_groupings(#{groupings := Gs}) ->
     Gs;
