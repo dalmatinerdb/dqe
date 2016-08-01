@@ -3,7 +3,7 @@
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.5">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.5">>},0},
  {<<"dproto">>,{pkg,<<"dproto">>,<<"0.1.19">>},0},
- {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.6">>},0},
+ {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.7">>},0},
  {<<"dqe_idx">>,{pkg,<<"dqe_idx">>,<<"0.1.18">>},0},
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.1.13">>},0},
  {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.2.10">>},0},
