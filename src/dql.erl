@@ -163,7 +163,7 @@ expand(Qs, T) ->
 %%--------------------------------------------------------------------
 -spec get_resolution([flat_stmt()], time()) ->
                             {error, term()} |
-                            {'ok',[{named, binary(), flat_stmt()}],
+                            {'ok', [{named, binary(), flat_stmt()}],
                              pos_integer()}.
 get_resolution(Qs, T) ->
     case lists:foldl(fun get_resolution_fn/2, {[], T, #{}}, Qs) of
@@ -197,7 +197,7 @@ update_name({named, _N, _C} = Q) when is_binary(_N) ->
     Q;
 
 update_name({named, _N, _C} = Q) ->
-    io:format("Unkown named: ~p~n", [Q]),
+    io:format("Unknown named: ~p~n", [Q]),
     Q.
 
 update_name_element({dvar, N}, _Path, Gs) ->
@@ -276,14 +276,14 @@ lexer_error(Line, E)  ->
 
 %%--------------------------------------------------------------------
 %% @private
-%% @doc Fetch the resulution for a single sub query.
+%% @doc Fetch the resolution for a single sub query.
 %% @end
 %%--------------------------------------------------------------------
 -spec get_resolution_fn(named(),
                         {[named()], time(), #{}} |
                         {error, resolution_conflict}) ->
                                {[named()], time(), #{}} |
-                               {error,resolution_conflict}.
+                               {error, resolution_conflict}.
 get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
     case get_times(Q, T, RAcc) of
         {ok, Q1, RAcc1} ->
@@ -293,7 +293,6 @@ get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
     end;
 get_resolution_fn(_, {error, resolution_conflict}) ->
     {error, resolution_conflict}.
-
 
 %%--------------------------------------------------------------------
 %% @private
@@ -413,6 +412,9 @@ resolve_functions(N) when is_float(N) ->
 resolve_functions(#{} = R) ->
     {ok, R}.
 
+-spec resolve_functions([statement()], [statement()]) ->
+                                    {ok, [statement()]} |
+                                    {error, term()}.
 resolve_functions([], Acc) ->
     {ok, lists:reverse(Acc)};
 resolve_functions([A | R], Acc) ->
@@ -422,7 +424,6 @@ resolve_functions([A | R], Acc) ->
         E ->
             E
     end.
-
 
 %%--------------------------------------------------------------------
 %% @doc Determines if a type is a constant or sub function.
@@ -435,7 +436,7 @@ is_constant(histogram_list) -> false;
 is_constant(_) -> true.
 
 %%--------------------------------------------------------------------
-%% @doc Add start and end times to a statment.
+%% @doc Add start and end times to a statement.
 %% @end
 %%--------------------------------------------------------------------
 -spec get_times(named(), time(), #{}) ->
@@ -448,6 +449,7 @@ get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
         E ->
             E
     end.
+
 -spec get_times_(flat_stmt(), time(), #{}) ->
                         {ok, flat_stmt(), #{}} |
                         {error, resolution_conflict}.
@@ -503,7 +505,7 @@ get_times_({calc, Chain, Get}, T, BucketResolutions) ->
     {ok, apply_times(Calc1), BucketResolutions1}.
 
 %%--------------------------------------------------------------------
-%% @doc Look up resolution of a get statment.
+%% @doc Look up resolution of a get statement.
 %% @end
 %%--------------------------------------------------------------------
 -spec bucket_resolution(get_stmt(), #{}) ->
@@ -557,7 +559,6 @@ get_resolution({calc, Chain, _}) ->
 
 get_resolution({combine, #{resolution := Rms}, _Elements}) ->
     {ok, Rms}.
-
 
 apply_times(#{op := named, args := [N, C]}) ->
     C1 = apply_times(C),
@@ -663,7 +664,7 @@ expand(Q) ->
 
 expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
     Gs = [N || {dvar, N} <- L],
-    [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];
+    [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++ Groupings)];
 
 expand_grouped(Q = #{op := named, args := [N, S]}, Groupings) ->
     [Q#{args => [N, S1]} || S1 <- expand_grouped(S, Groupings)];
@@ -703,17 +704,18 @@ expand_grouped(Q = #{op := lookup,
              args := [Collection, Metric]}, Groupings) ->
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings),
     Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
-     || {Bucket, Key, GVs} <- BMs];
+    [begin
+         Q1#{args => [Bucket, Key],
+             groupings => lists:zip(Groupings, GVs)}
+     end || {Bucket, Key, GVs} <- BMs];
 
 expand_grouped(Q = #{op := sget,
              args := [Bucket, Glob]}, _Groupings) ->
-    %% Glob is in an extra list since expand is build to use one or more
+    %% Glob is in an extra list since expand is built to use one or more
     %% globs
     {ok, {_Bucket, Ms}} = dqe_idx:expand(Bucket, [Glob]),
     Q1 = Q#{op := get},
     [Q1#{args => [Bucket, Key]} || Key <- Ms].
-
 
 compute_se(#{ op := between, args := [S, E]}, _Rms) when E > S->
     {S, E - S};
