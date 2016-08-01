@@ -18,9 +18,14 @@ unparse(#{op   := combine,
     Qs = unparse(Args),
     <<Name/binary, "(", Qs/binary, ")">>;
 
-unparse(#{op := named, args := [N, Q]}) ->
+unparse(#{op := named, args := [N, Q]}) when is_binary(N) ->
     Qs = unparse(Q),
     <<Qs/binary, " AS '", N/binary, "'">>;
+
+unparse(#{op := named, args := [L, Q]}) when is_list(L) ->
+    N = unparse_named(L),
+    Qs = unparse(Q),
+    <<Qs/binary, " AS ", N/binary>>;
 
 unparse(#{op := time, args := [N, U]}) ->
     Us = atom_to_binary(U, utf8),
@@ -40,6 +45,9 @@ unparse({select, Q, [], T}) ->
 unparse({select, Q, A, T}) ->
     <<"SELECT ", (unparse(Q))/binary, " ALIAS ", (unparse(A))/binary, " ",
       (unparse(T))/binary>>;
+
+unparse(#{op := timeshift, args := [T, Q]}) ->
+    <<(unparse(Q))/binary, " SHIFT BY ", (unparse(T))/binary>>;
 
 unparse(#{op := last, args := [Q]}) ->
     <<"LAST ", (unparse(Q))/binary>>;
@@ -74,6 +82,24 @@ unparse_metric([Metric | R], Acc) ->
     unparse_metric(R, <<Acc/binary, ".'", Metric/binary, "'">>);
 unparse_metric([], Acc) ->
     Acc.
+
+unparse_named(Ms) ->
+    Ms1 = [unparse_name(E) || E <- Ms],
+    <<".", Result/binary>> = unparse_named(Ms1, <<>>),
+    Result.
+unparse_named([Named | R], Acc) ->
+    unparse_named(R, <<Acc/binary, ".", Named/binary, "">>);
+unparse_named([], Acc) ->
+    Acc.
+
+unparse_name(B) when is_binary(B) ->
+    <<"'", B/binary, "'">>;
+unparse_name({pvar, I}) ->
+    <<"$", (integer_to_binary(I))/binary>>;
+unparse_name({dvar, {<<>>, K}}) ->
+    <<"$'", K/binary, "'">>;
+unparse_name({dvar, {Ns, K}}) ->
+    <<"$'", Ns/binary, "':'", K/binary, "'">>.
 
 unparse_tag({tag, <<>>, K}) ->
     <<"'", K/binary, "'">>;

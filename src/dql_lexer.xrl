@@ -33,6 +33,8 @@ AFTER   = [Aa][Ff][Tt][Ee][Rr]
 BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
 FOR     = [Ff][Oo][Rr]
 WHERE   = [Ww][Hh][Ee][Rr][Ee]
+SHIFT   = [Ss][Hh][Ii][Ff][Tt]
+BY      = [Bb][Yy]
 
 
 
@@ -53,6 +55,8 @@ Rules.
 {BEFORE}    :   {token, {kw_before,     TokenLine}}.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
+{SHIFT}     :   {token, {kw_shift,      TokenLine}}.
+{BY}        :   {token, {kw_by,         TokenLine}}.
 
 {TIME}      :   {token, {time,          TokenLine, a(TokenChars)}}.
 

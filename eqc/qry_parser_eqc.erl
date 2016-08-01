@@ -5,8 +5,14 @@
 
 -define(P, dql).
 
+str() ->
+    list(choose($a, $z)).
+
+str_bin() ->
+    ?LET(S, list(choose($a, $z)), list_to_binary(S)).
+
 non_empty_string() ->
-    ?SUCHTHAT(L, list(choose($a, $z)), length(L) >= 2).
+    ?SUCHTHAT(L, str(), length(L) >= 2).
 
 diff_strings() ->
     ?SUCHTHAT({S1, S2}, {non_empty_string(), non_empty_string()}, S1 =/= S2).
@@ -16,7 +22,6 @@ non_empty_binary() ->
 
 pos_int() ->
     ?SUCHTHAT(N, int(), N > 0).
-
 
 time_unit() ->
     oneof([ms, s, m, h, d, w]).
@@ -47,9 +52,9 @@ hfun() ->
 aliases() ->
     [].
 
-qry_tree() ->
+select_stmt() ->
     {select,
-     non_empty_list(?SIZED(Size, qry_tree(Size))),
+     non_empty_list(?SIZED(Size, maybe_named(Size))),
      aliases(),
      oneof([
             #{op => last, args => [pos_int()]},
@@ -134,6 +139,40 @@ sget_f() ->
       return    => metric
     }.
 
+dvar() ->
+    {dvar, {str_bin(), non_empty_binary()}}.
+
+pvar() ->
+    {pvar, choose(1, 1)}.
+
+named_element() ->
+    oneof([
+           non_empty_binary(),
+           %%dvar(),
+           pvar()
+           ]).
+named() ->
+    ?SUCHTHAT(L, list(named_element()), L =/= []).
+
+maybe_named(S) ->
+    oneof([
+           qry_tree(S),
+           #{
+              op   => named,
+              args => [named(), qry_tree(S)],
+              return => undefined
+            }
+          ]).
+
+maybe_shifted(S) ->
+    oneof([
+           qry_tree(S),
+           #{
+              op   => timeshift,
+              args => [time_type(), qry_tree(S)]
+            }
+          ]).
+
 qry_tree(S) when S < 1->
     oneof([
            get_f(),
@@ -188,8 +227,9 @@ where_clause(S) ->
     ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
 
 where_clause_choice(N, S) ->
-    oneof([{'and', where_clause(N), where_clause(S - N)},
-           {'or', where_clause(N), where_clause(S - N)}]).
+    oneof([{'and', where_clause(N), where_clause(S - N)}
+           %%,{'or', where_clause(N), where_clause(S - N)}
+          ]).
 
 glob() ->
     ?LET({S, G, M}, ?SIZED(Size, glob(Size)),
@@ -228,7 +268,7 @@ glob_element(Size) ->
           {[non_empty_string() | L], ["*" | G], M})).
 
 prop_qery_parse_unparse() ->
-    ?FORALL(T, qry_tree(),
+    ?FORALL(T, select_stmt(),
             begin
                 Unparsed = dql_unparse:unparse(T),
                 case ?P:parse(Unparsed) of
@@ -246,7 +286,7 @@ prop_qery_parse_unparse() ->
 
 prop_prepare() ->
     ?SETUP(fun mock/0,
-           ?FORALL(T, qry_tree(),
+           ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case ?P:prepare(Unparsed) of
@@ -261,7 +301,7 @@ prop_prepare() ->
 
 prop_dflow_prepare() ->
     ?SETUP(fun mock/0,
-           ?FORALL(T, qry_tree(),
+           ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case dqe:prepare(Unparsed) of
@@ -279,7 +319,8 @@ mock() ->
     meck:new(ddb_connection),
     meck:expect(ddb_connection, list,
                 fun (_) ->
-                        {ok, [dproto:metric_from_list([<<"a">>])]}
+                        M = [<<"a">>, <<"b">>, <<"c">>],
+                        {ok, [dproto:metric_from_list(M)]}
                 end),
     meck:expect(ddb_connection, resolution,
                 fun (_) ->
@@ -291,10 +332,17 @@ mock() ->
                         {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
                 end),
     ensure_dqe_fun(),
+    meck:new(dqe_idx, [passthrough]),
+    meck:expect(dqe_idx, lookup,
+                fun (_, _) ->
+                        {ok, [{<<"a">>, <<"a">>, [<<"a">>]}]}
+                end),
+
     fun unmock/0.
 
 unmock() ->
     meck:unload(ddb_connection),
+    meck:unload(dqe_idx),
     ok.
 
 ensure_dqe_fun() ->
