@@ -2,7 +2,7 @@
 
 -include_lib("mmath/include/mmath.hrl").
 
--export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2]).
+-export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0]).
 
 -record(state, {
          }).
@@ -24,3 +24,7 @@ spec() ->
 
 run(Datas, S) ->
     {mmath_comb:sum(Datas), S}.
+
+help() ->
+    <<"Combines multiple series into one by adding the values for each "
+      "time offset together">>.

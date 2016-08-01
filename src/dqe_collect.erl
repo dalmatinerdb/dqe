@@ -32,4 +32,5 @@ done(_Child, State = #state{resolution = undefined}) ->
     {done, State};
 
 done(_Child, State = #state{resolution = Resolution, name = Name, acc = Acc}) ->
-    {done, {Name, mmath_bin:derealize(Acc), Resolution}, State#state{acc = <<>>}}.
+    {done, {Name, mmath_bin:derealize(Acc), Resolution},
+     State#state{acc = <<>>}}.

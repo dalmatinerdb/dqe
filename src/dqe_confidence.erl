@@ -3,7 +3,7 @@
 
 -include_lib("mmath/include/mmath.hrl").
 
--export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2]).
+-export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0]).
 
 -record(state, {
          }).
@@ -25,3 +25,8 @@ spec() ->
 
 run([Data], S = #state{}) ->
     {mmath_trans:confidence(Data), S}.
+
+help() ->
+    <<"Converts the metric from the value at a given time into the confidence "
+      "at a given time. This can be either applied to raw serieses or "
+      "aggregates. The return value is a float between 0 and 1.">>.

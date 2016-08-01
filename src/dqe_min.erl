@@ -2,7 +2,7 @@
 
 -include_lib("mmath/include/mmath.hrl").
 
--export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2]).
+-export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0]).
 
 -record(state, {
           time :: pos_integer(),
@@ -27,3 +27,6 @@ spec() ->
 
 run([Data], S = #state{count = Count}) ->
     {mmath_aggr:min(Data, Count), S}.
+
+help() ->
+    <<"Calculates the minimum value of a series over a given period of time">>.
