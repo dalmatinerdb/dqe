@@ -12,7 +12,7 @@ DATE    = "(\\.|[^\"\\])+"
 MET     = {PART}(\.{PART})+
 S       = [A-Za-z][A-Za-z0-9_@-]*
 PVAR    = [$][0-9]+
-QVAR    = [$]'([^']|\.)+'
+QVAR    = [$]'(\\.|[^\'\\])+'
 %'% damn you syntax highlighter
 VAR     = [$][A-Za-z0-9_@-]+
 WS      = ([\000-\s]|%.*)
