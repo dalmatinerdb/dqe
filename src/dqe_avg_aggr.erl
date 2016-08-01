@@ -1,4 +1,4 @@
--module(dqe_avg).
+-module(dqe_avg_aggr).
 -behaviour(dqe_fun).
 
 -include_lib("mmath/include/mmath.hrl").
