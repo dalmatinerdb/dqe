@@ -4,16 +4,16 @@
    │  └─ poolboy─1.5.1
    ├─ dflow─0.1.5
    ├─ dproto─0.1.19
-   ├─ dqe_fun─0.1.4
+   ├─ dqe_fun─0.1.5
    ├─ dqe_idx─0.1.18
    ├─ dqe_idx_ddb─0.1.13
-   ├─ dqe_idx_pg─0.2.9
+   ├─ dqe_idx_pg─0.2.10
    │  └─ pgapp─0.0.1
    │     └─ epgsql─3.1.1
    ├─ hdr_histogram─0.2.0
    ├─ lager─3.2.1
    │  └─ goldrush─0.1.8
-   ├─ mmath─0.2.0-alpha6
+   ├─ mmath─0.2.0
    └─ qdate─0.4.3
       ├─ erlang_localtime─1.0.0
       └─ erlware_commons─0.20.0

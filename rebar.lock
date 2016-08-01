@@ -13,10 +13,7 @@
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
  {<<"hdr_histogram">>,{pkg,<<"hdr_histogram">>,<<"0.2.0">>},0},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
- {<<"mmath">>,
-  {git,"https://github.com/dalmatinerdb/mmath.git",
-       {ref,"4081041d7f98e7e89f47667f07ceaa20cc27d35f"}},
-  0},
+ {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.0">>},0},
  {<<"pgapp">>,{pkg,<<"pgapp">>,<<"0.0.1">>},1},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},1},
  {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0}].
