@@ -35,14 +35,15 @@
 
 init() ->
     AggrFuns = [
-                dqe_avg,
                 dqe_max,
                 dqe_min,
+                dqe_avg_aggr,
                 dqe_sum_aggr,
                 dqe_derivate,
                 dqe_confidence
                ],
     CombFuns = [
+                dqe_avg_comb,
                 dqe_sum_comb
                ],
     AllFuns = AggrFuns ++ CombFuns,
@@ -256,5 +257,5 @@ translate({combine,
     Parts1 = [begin
                   {ok, _, P1} = translate(Part),
                   P1
-              end|| Part <- Parts],
+              end || Part <- Parts],
     {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}}.
