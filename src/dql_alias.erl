@@ -32,13 +32,24 @@ expand(Qs, Aliases) ->
                         {error, term()} |
                         {ok, [dql:statement()]}.
 resolve(Qs, Aliases) ->
-    {QQ, _AliasesQ} =
-        lists:foldl(fun(Q, {QAcc, AAcc}) ->
-                            {Q1, A1} = resolve_statement(Q, AAcc),
-                            {[Q1 | QAcc], A1}
+    %%{QQ, _AliasesQ} =
+    R = lists:foldl(fun(_, {error, _} = E) ->
+                            E;
+                       (Q, {QAcc, AAcc}) ->
+                            case resolve_statement(Q, AAcc) of
+                                {error, _} = E ->
+                                    E;
+                                {Q1, A1} ->
+                                    {[Q1 | QAcc], A1}
+                            end
                     end, {[], Aliases}, Qs),
-    dqe_lib:pdebug('parse', "Preprocessor done.", []),
-    {ok, lists:reverse(QQ)}.
+    case R of
+        {error, _} = E ->
+            E;
+        {QQ, _AliasesQ} ->
+            dqe_lib:pdebug('parse', "Preprocessor done.", []),
+            {ok, lists:reverse(QQ)}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -62,8 +73,12 @@ resolve_statement(O = #{op := named, args := [N, Q]}, Aliases) ->
     {Q1, A1} = resolve_statement(Q, Aliases),
     {O#{args => [N, Q1]}, A1};
 resolve_statement(#{op := var, args := [V]}, Aliases) ->
-    {value, G} = gb_trees:lookup(V, Aliases),
-    {G, Aliases};
+    case gb_trees:lookup(V, Aliases) of
+        {value, G} ->
+            {G, Aliases};
+        _ ->
+            {error, {missing_alias, V}}
+    end;
 resolve_statement(O = #{}, Aliases) ->
     {O, Aliases};
 resolve_statement(N, A) when is_number(N)->
