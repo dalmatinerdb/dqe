@@ -13,7 +13,7 @@
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
  {<<"hdr_histogram">>,{pkg,<<"hdr_histogram">>,<<"0.2.0">>},0},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
- {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.0">>},0},
+ {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.2">>},0},
  {<<"pgapp">>,{pkg,<<"pgapp">>,<<"0.0.1">>},1},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},1},
  {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0}].
