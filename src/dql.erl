@@ -5,7 +5,8 @@
 -export([parse/1]).
 -endif.
 
--export_type([query_part/0, dqe_fun/0, query_stmt/0]).
+-export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
+              statement/0]).
 
 -type time() :: #{ op => time, args => [pos_integer() | ms | s | m | h | d | w]} | pos_integer().
 
@@ -119,7 +120,7 @@ resolve_query_functions(Qs, T) ->
 -spec flatten_step([statement()], time()) ->
                           {ok, [query_stmt()], pos_integer()}.
 flatten_step(Qs, T) ->
-    Qs1 = [flatten(Q) || Q <- Qs],
+    Qs1 = dql_flatten:flatten(Qs),
     dqe_lib:pdebug('parse', "Query flattened.", []),
     expand(Qs1, T).
 
@@ -433,71 +434,6 @@ time_walk_chain([E = #{op := fcall,
 
 time_walk_chain([E | R], Rms, Acc) ->
     time_walk_chain(R, Rms, [E | Acc]).
-
-
-get_type(#{return := R}) ->
-    R;
-get_type({calc, [], C}) ->
-    get_type(C);
-get_type({calc, L, _}) when is_list(L) ->
-    get_type(lists:last(L));
-get_type({combine, F, _}) ->
-    get_type(F).
-
--spec flatten(dqe_fun() | get_stmt()) ->
-                     #{op => named, args => [binary() | flat_stmt()]}.
-flatten(#{op := timeshift, args := [Time, Child]}) ->
-    #{args := [N, C]} = R = flatten(Child),
-    R#{args := [N, #{op => timeshift, args => [Time, C],
-                     return => get_type(C)}]};
-flatten(#{op := named, args := [N, Child]}) ->
-    C = flatten(Child, []),
-    R = get_type(C),
-    #{
-       op => named,
-       args => [N, C],
-       signature => [string, R],
-       return => R
-     };
-
-flatten(Child = #{return := R}) ->
-    N = dql_unparse:unparse(Child),
-    C = flatten(Child, []),
-    #{
-       op => named,
-       args => [N, C],
-       signature => [string, R],
-       return => R
-     }.
-
--spec flatten(statement(), [dqe_fun()]) ->
-                     flat_stmt().
-%% flatten(#{op := timeshift, args := [_Time, Child]}, []) ->
-flatten(F = #{op   := fcall,
-              args := Args = #{inputs := [Child]}}, Chain) ->
-    Args1 = maps:remove(inputs, Args),
-    Args2 = maps:remove(orig_args, Args1),
-    flatten(Child, [F#{args => Args2} | Chain]);
-
-flatten(F = #{op   := combine,
-              args := Args = #{inputs := Children}}, Chain) ->
-    Args1 = maps:remove(orig_args, Args),
-    Args2 = maps:remove(inputs, Args1),
-    Children1 = [flatten(C, []) || C <- Children],
-    Comb = {combine, F#{args => Args2}, Children1},
-    {calc, Chain, Comb};
-
-flatten(Get = #{op := get},
-        Chain) ->
-    {calc, Chain, Get};
-
-flatten(Get = #{op := lookup},
-        Chain) ->
-    {calc, Chain, Get};
-
-flatten(Get = #{op := sget},
-        Chain) ->
-    {calc, Chain, Get}.
 
 expand(Q) ->
     expand_grouped(Q, []).
