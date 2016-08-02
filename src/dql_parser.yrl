@@ -3,7 +3,7 @@ Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause perhaps_shifted
-maybe_math math1 math2 number.
+maybe_math math1 math2.
 
 %% hist  calculatables.
 
@@ -73,7 +73,7 @@ math2 -> math2 '*' math2 : #{op => fcall,
                              args => #{name => <<"product">>,
                                        inputs => ['$1', '$3']}}.
 math2 -> math2 '/' math2 : #{op => fcall,
-                             args => #{name => <<"division">>,
+                             args => #{name => <<"quotient">>,
                                        inputs => ['$1', '$3']}}.
 %% math2 -> math2 '*' number : #{op => fcall,
 %%                               args => #{name => <<"multiply">>,
@@ -101,13 +101,14 @@ calculatable -> selector : '$1'.
 
 
 fun_arg -> int_or_time : '$1'.
-fun_arg -> calculatable : '$1'.
+%%fun_arg -> calculatable : '$1'.
+fun_arg -> maybe_math : '$1'.
 %%fun_arg -> integer : '$1'.
 fun_arg -> float : '$1'.
 
 
-number -> integer : unwrap('$1').
-number -> float   : unwrap('$1').
+%% number -> integer : unwrap('$1').
+%% number -> float   : unwrap('$1').
 
 fun_args -> fun_arg : ['$1'].
 fun_args -> fun_arg ',' fun_args : ['$1'] ++ '$3'.
