@@ -133,8 +133,7 @@ flatten_step(Qs, T) ->
                     {'ok',[query_stmt()], pos_integer()}.
 expand(Qs, T) ->
     Qs1 = dql_expand:expand(Qs),
-    Qs2 = lists:flatten(Qs1),
-    get_resolution(Qs2, T).
+    get_resolution(Qs1, T).
 
 %%--------------------------------------------------------------------
 %% @private

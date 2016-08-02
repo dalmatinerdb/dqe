@@ -11,7 +11,7 @@
 -export([expand/1]).
 
 expand(Qs) ->
-    [expand_grouped(Q, []) || Q <- Qs].
+    lists:flatten([expand_grouped(Q, []) || Q <- Qs]).
 
 expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
     Gs = [N || {dvar, N} <- L],
