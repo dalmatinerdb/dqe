@@ -45,7 +45,9 @@ init() ->
     CombFuns = [
                 dqe_avg_comb,
                 dqe_sum_comb,
-                dqe_min_comb,
+                dqe_diff_comb,
+                dqe_product_comb,
+                dqe_quotient_comb,
                 dqe_max_comb
                ],
     AllFuns = AggrFuns ++ CombFuns,
