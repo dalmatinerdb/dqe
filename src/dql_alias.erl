@@ -3,7 +3,7 @@
 -export([expand/2]).
 
 %%--------------------------------------------------------------------
-%% @doc Expand aliases in all query parts by replacing them with 
+%% @doc Expand aliases in all query parts by replacing them with
 %% actual selectors
 %% @end
 %%--------------------------------------------------------------------
@@ -29,8 +29,8 @@ expand(Qs, Aliases) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec resolve([dql:statement()], gb_trees:tree()) ->
-                        {error, term()} |
-                        {ok, [dql:statement()]}.
+                     {error, term()} |
+                     {ok, [dql:statement()]}.
 resolve(Qs, Aliases) ->
     %%{QQ, _AliasesQ} =
     R = lists:foldl(fun(_, {error, _} = E) ->
@@ -56,7 +56,7 @@ resolve(Qs, Aliases) ->
 %% @doc Resolves alias in a statement
 %% @end
 %%--------------------------------------------------------------------
--spec resolve_statement(dql:statement(), gb_trees:tree()) -> 
+-spec resolve_statement(dql:statement(), gb_trees:tree()) ->
                                {error, term()} |
                                {term(), gb_trees:tree()}.
 resolve_statement(O = #{op  := fcall,
