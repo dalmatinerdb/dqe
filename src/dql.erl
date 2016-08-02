@@ -132,7 +132,7 @@ flatten_step(Qs, T) ->
 -spec expand([flat_stmt()], time()) ->
                     {'ok',[query_stmt()], pos_integer()}.
 expand(Qs, T) ->
-    Qs1 = [expand(Q) || Q <- Qs],
+    Qs1 = dql_expand:expand(Qs),
     Qs2 = lists:flatten(Qs1),
     get_resolution(Qs2, T).
 
@@ -435,61 +435,6 @@ time_walk_chain([E = #{op := fcall,
 time_walk_chain([E | R], Rms, Acc) ->
     time_walk_chain(R, Rms, [E | Acc]).
 
-expand(Q) ->
-    expand_grouped(Q, []).
-
-expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
-    Gs = [N || {dvar, N} <- L],
-    [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];
-
-expand_grouped(Q = #{op := named, args := [N, S]}, Groupings) ->
-    [Q#{args => [N, S1]} || S1 <- expand_grouped(S, Groupings)];
-
-expand_grouped(Q = #{op := timeshift, args := [T, S]}, Groupings) ->
-    [Q#{args => [T, S1]} || S1 <- expand_grouped(S, Groupings)];
-
-expand_grouped({calc, Fs, Q}, Groupings) ->
-    [{calc, Fs, Q1} || Q1 <- expand_grouped(Q, Groupings)];
-
-expand_grouped({combine, F, Qs}, Groupings) ->
-    [{combine, F, lists:flatten([expand_grouped(Q, Groupings) || Q <- Qs])}];
-
-expand_grouped(Q = #{op := get}, _Groupings) ->
-    [Q];
-
-expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric, Where]}, []) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
-
-expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric, Where]}, Groupings) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}, Groupings),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
-     || {Bucket, Key, GVs} <- BMs];
-
-expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric]}, []) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
-
-expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric]}, Groupings) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
-     || {Bucket, Key, GVs} <- BMs];
-
-expand_grouped(Q = #{op := sget,
-             args := [Bucket, Glob]}, _Groupings) ->
-    %% Glob is in an extra list since expand is build to use one or more
-    %% globs
-    {ok, {_Bucket, Ms}} = dqe_idx:expand(Bucket, [Glob]),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key]} || Key <- Ms].
 
 
 compute_se(#{ op := between, args := [S, E]}, _Rms) when E > S->
