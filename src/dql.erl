@@ -6,7 +6,7 @@
 -endif.
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
-              statement/0]).
+              statement/0, named/0, time/0]).
 
 -type time() :: #{ op => time, args => [pos_integer() | ms | s | m | h | d | w]} | pos_integer().
 
@@ -145,12 +145,11 @@ expand(Qs, T) ->
                             {'ok',[{named, binary(), flat_stmt()}],
                              pos_integer()}.
 get_resolution(Qs, T) ->
-    case lists:foldl(fun get_resolution_fn/2, {[], T, #{}}, Qs) of
+    case dql_resolution:resolve(Qs, T) of
         {error, E} ->
             {error, E};
-        {Qs1, _, _} ->
-            Qs2 = lists:reverse(Qs1),
-            propagate_resolutions(Qs2, T)
+        {ok, Qs1} ->
+            propagate_resolutions(Qs1, T)
     end.
 
 %%--------------------------------------------------------------------
@@ -159,8 +158,8 @@ get_resolution(Qs, T) ->
 %% @end
 %%--------------------------------------------------------------------
 propagate_resolutions(Qs, T) ->
-    Qs1 = [apply_times(Q) || Q <- Qs],
-    {Start, _End} = compute_se(apply_times(T, 1000), 1000),
+    Qs1 = dql_resolution:propagate(Qs),
+    Start = dql_resolution:start_time(T),
     apply_names(Qs1, Start).
 
 apply_names(Qs, Start) ->
@@ -251,239 +250,3 @@ lexer_error(Line, {illegal, E})  ->
 lexer_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
                                          [Line, E]))}.
-
-
-%%--------------------------------------------------------------------
-%% @private
-%% @doc Fetch the resulution for a single sub query.
-%% @end
-%%--------------------------------------------------------------------
--spec get_resolution_fn(named(),
-                        {[named()], time(), #{}} |
-                        {error, resolution_conflict}) ->
-                               {[named()], time(), #{}} |
-                               {error,resolution_conflict}.
-get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
-    case get_times(Q, T, RAcc) of
-        {ok, Q1, RAcc1} ->
-            {[Q1 | QAcc], T, RAcc1};
-        {error, resolution_conflict} ->
-            {error, resolution_conflict}
-    end;
-get_resolution_fn(_, {error, resolution_conflict}) ->
-    {error, resolution_conflict}.
-
-
-
-%%--------------------------------------------------------------------
-%% @doc Add start and end times to a statment.
-%% @end
-%%--------------------------------------------------------------------
--spec get_times(named(), time(), #{}) ->
-                       {ok, named(), #{}} |
-                       {error, resolution_conflict}.
-get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
-    case get_times_(C, T, BucketResolutions) of
-        {ok, C1, BucketResolutions1} ->
-            {ok, O#{args => [N, C1]}, BucketResolutions1};
-        E ->
-            E
-    end.
--spec get_times_(flat_stmt(), time(), #{}) ->
-                        {ok, flat_stmt(), #{}} |
-                        {error, resolution_conflict}.
-get_times_(S = #{op := timeshift, args := [Shift, C]}, T, BucketResolutions) ->
-    T1 = S#{args := [Shift, T]},
-    get_times_(C, T1, BucketResolutions);
-
-get_times_({calc, Chain,
-            {combine,
-             F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
-           }, T, #{} = BucketResolutions) ->
-    Res = lists:foldl(fun (E, {ok, Acc, #{} = BRAcc}) ->
-                              case get_times_(E, T, BRAcc) of
-                                  {ok, E1, BR1} ->
-                                      {ok, [E1 | Acc], BR1};
-                                  Error ->
-                                      Error
-                              end;
-                          (_, E) ->
-                              E
-                      end, {ok, [], BucketResolutions}, Elements),
-    case Res of
-        {ok, Elements1, #{} = BR} ->
-            Rmss = [get_resolution(E) || E <- Elements1],
-            case lists:usort(Rmss) of
-                [{ok, Rms}] ->
-                    Elements2 = lists:reverse(Elements1),
-                    Cs1 = [map_constants(C) || C <- Cs],
-                    State = FMod:init(Cs1),
-                    {Chunk, State1} = FMod:resolution(Rms, State),
-                    Rms1 = Rms * Chunk,
-                    A1 = A#{constants => Cs1, state => State1},
-                    F1 = F#{args => A1,
-                            resolution => Rms1},
-                    Comb1 = {combine, F1, Elements2},
-                    Calc1 = {calc, Chain, Comb1},
-                    {ok, apply_times(Calc1), BR};
-                _Error ->
-                    io:format("Elements: ~p~n", [Elements]),
-                    {error, resolution_conflict}
-            end;
-        {error, E} ->
-            {error, E}
-    end;
-
-get_times_({calc, Chain, Get}, T, BucketResolutions) ->
-    {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} =
-        bucket_resolution(Get, BucketResolutions),
-    T1 = apply_times(T, Rms),
-    {Start, Count} = compute_se(T1, Rms),
-    Calc1 = {calc, Chain, Get1#{resolution => Rms,
-                                args => [Start, Count | A]}},
-    {ok, apply_times(Calc1), BucketResolutions1}.
-
-%%--------------------------------------------------------------------
-%% @doc Look up resolution of a get statment.
-%% @end
-%%--------------------------------------------------------------------
--spec bucket_resolution(get_stmt(), #{}) ->
-                               {ok, get_stmt(), #{}}.
-bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
-    {Res, BR1} = case maps:get(Bucket, BucketResolutions, undefined) of
-                     undefined ->
-                         {ok, R} = get_br(Bucket),
-                         {R, maps:put(Bucket, R, BucketResolutions)};
-                     R ->
-                         {R, BucketResolutions}
-                 end,
-    {ok, O#{args => [Res | A]}, BR1}.
-
-%%--------------------------------------------------------------------
-%% @doc Fetch the resolution of a bucket from DDB
-%% @end
-%%--------------------------------------------------------------------
--spec get_br(binary()) -> {ok, pos_integer()}.
-get_br(Bucket) ->
-    ddb_connection:resolution(Bucket).
-
-%%--------------------------------------------------------------------
-%% @doc Resolves constants to their numeric representation
-%% @end
-%%--------------------------------------------------------------------
-map_constants(T = #{op := time}) ->
-    dqe_time:to_ms(T);
-map_constants(#{op := integer, args := [N]}) ->
-    N;
-map_constants(#{op := float, args := [N]}) ->
-    N;
-map_constants(E) ->
-    E.
-
-%%--------------------------------------------------------------------
-%% @doc Propagates resolution from the bottom of a call to the top.
-%% @end
-%%--------------------------------------------------------------------
-get_resolution(#{op := O, args := [_Start, _Count, Rms | _]})
-  when O =:= get;
-       O =:= sget ->
-    {ok, Rms};
-
-get_resolution({calc, [], Get}) ->
-    get_resolution(Get);
-
-get_resolution({calc, Chain, _}) ->
-    #{resolution := Rms} = lists:last(Chain),
-    {ok, Rms};
-
-get_resolution({combine, #{resolution := Rms}, _Elements}) ->
-    {ok, Rms}.
-
-
-apply_times(#{op := named, args := [N, C]}) ->
-    C1 = apply_times(C),
-    {named, N, C1};
-
-apply_times({calc, Chain, {combine, F = #{resolution := Rms}, Elements}}) ->
-    Elements1 = [apply_times(E) || E <- Elements],
-    Chain1 = time_walk_chain(Chain, Rms, []),
-    Chain2 = lists:reverse(Chain1),
-    {calc, Chain2, {combine, F, Elements1}};
-
-apply_times({calc, Chain, Get}) ->
-    {ok, Rms} = get_resolution(Get),
-    Chain1 = time_walk_chain(Chain, Rms, []),
-    Chain2 = lists:reverse(Chain1),
-    {calc, Chain2, Get}.
-
-time_walk_chain([], _Rms, Acc) ->
-    Acc;
-
-time_walk_chain([E = #{op := fcall,
-                       args := A = #{mod := FMod, constants := Cs}} | R],
-                Rms, Acc) ->
-    Cs1 = [map_constants(C) || C <- Cs],
-    State = FMod:init(Cs1),
-    {Chunk, State1} = FMod:resolution(Rms, State),
-    Rms1 = Rms * Chunk,
-    A1 = A#{constants => Cs1, state => State1},
-    time_walk_chain(R, Rms1, [E#{chunk => Chunk,
-                                 resolution => Rms1,
-                                 args => A1} | Acc]);
-
-time_walk_chain([E | R], Rms, Acc) ->
-    time_walk_chain(R, Rms, [E | Acc]).
-
-
-
-compute_se(#{ op := between, args := [S, E]}, _Rms) when E > S->
-    {S, E - S};
-compute_se(#{ op := between, args := [S, E]}, _Rms) ->
-    {E, S - E};
-compute_se(#{ op := last, args := [N]}, Rms) ->
-    NowMs = erlang:system_time(milli_seconds),
-    RelativeNow = NowMs div Rms,
-    {RelativeNow - N, N};
-
-compute_se(#{op := before, args := [E, D]}, _Rms) ->
-    {E - D, D};
-
-compute_se(#{op := timeshift, args := [Shift, T]}, Rms) ->
-    {S, D} = compute_se(T, Rms),
-    {S - Shift, D};
-
-compute_se(#{op :='after', args := [S, D]}, _Rms) ->
-    {S, D}.
-
-apply_times(#{op := last, args := [L]}, R) ->
-    #{op => last, args => [apply_times(L, R)]};
-
-apply_times(#{op := between, args := [S, E]}, R) ->
-    #{op => between, args => [apply_times(S, R), apply_times(E, R)]};
-
-apply_times(#{op := 'after', args := [S, D]}, R) ->
-    #{op => 'after', args => [apply_times(S, R), apply_times(D, R)]};
-
-apply_times(#{op := before, args := [E, D]}, R) ->
-    #{op => before, args => [apply_times(E, R), apply_times(D, R)]};
-
-apply_times(#{op := timeshift, args := [Shift, T]}, R) ->
-    T1 = apply_times(T, R),
-    S1 = apply_times(Shift, R),
-    #{op => timeshift, args => [S1, T1]};
-
-
-apply_times(N, _) when is_integer(N) ->
-    erlang:max(1, N);
-
-apply_times(now, R) ->
-    NowMs = erlang:system_time(milli_seconds),
-    erlang:max(1, NowMs div R);
-
-apply_times(#{op := ago, args := [T]}, R) ->
-    NowMs = erlang:system_time(milli_seconds),
-    erlang:min(1, (NowMs - dqe_time:to_ms(T)) div R);
-
-
-apply_times(T, R) ->
-    erlang:max(1, dqe_time:to_ms(T) div R).
