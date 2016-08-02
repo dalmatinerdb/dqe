@@ -6,7 +6,7 @@
 %%% @end
 %%% Created :  2 Aug 2016 by Heinz Nikolaus Gies <heinz@licenser.net>
 %%%-------------------------------------------------------------------
--module(dqe_resolver).
+-module(dql_resolver).
 -export([resolve/1]).
 
 resolve(Qs) ->

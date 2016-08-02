@@ -104,7 +104,7 @@ expand_aliases(Qs, Aliases, T) ->
                      {error, term()} |
                      {ok, [query_stmt()], pos_integer()}.
 resolve_query_functions(Qs, T) ->
-    case dqe_resolver:resolve(Qs) of
+    case dql_resolver:resolve(Qs) of
         {ok, Qs1} ->
             flatten_step(Qs1, T);
         E ->
