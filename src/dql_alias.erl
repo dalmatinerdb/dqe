@@ -62,13 +62,24 @@ resolve(Qs, Aliases) ->
 resolve_statement(O = #{op  := fcall,
                         args := Args = #{inputs := Input}},
                   Aliases) ->
-    {Input1, A1} =
-        lists:foldl(fun (Q, {QAcc, AAcc}) ->
-                            {Qx, Ax} = resolve_statement(Q, AAcc),
-                            {[Qx | QAcc], Ax}
+    R1 =
+        lists:foldl(fun (_, {error, _} = E) ->
+                            E;
+                        (Q, {QAcc, AAcc}) ->
+                            case resolve_statement(Q, AAcc) of
+                                {error, _} = E ->
+                                    E;
+                                {Qx, Ax} ->
+                                    {[Qx | QAcc], Ax}
+                            end
                     end, {[], Aliases}, Input),
-    Input2 = lists:reverse(Input1),
-    {O#{args => Args#{inputs => Input2}}, A1};
+    case R1 of
+        {error, _} = E ->
+            E;
+        {Input1, A1} ->
+            Input2 = lists:reverse(Input1),
+            {O#{args => Args#{inputs => Input2}}, A1}
+    end;
 resolve_statement(O = #{op := named, args := [N, Q]}, Aliases) ->
     {Q1, A1} = resolve_statement(Q, Aliases),
     {O#{args => [N, Q1]}, A1};
