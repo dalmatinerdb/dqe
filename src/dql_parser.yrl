@@ -3,7 +3,7 @@ Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause perhaps_shifted
-maybe_math math1 math2.
+math math1 math2.
 
 %% hist  calculatables.
 
@@ -40,8 +40,8 @@ perhaps_shifted -> fune : '$1'.
 
 %% Element in the function list, either a calculatable or a calculatable
 %% with a name
-fune -> maybe_math kw_as as_clause : named('$3', '$1').
-fune -> maybe_math : '$1'.
+fune -> math kw_as as_clause : named('$3', '$1').
+fune -> math : '$1'.
 
 as_part -> part_or_name          : '$1'.
 as_part -> dvar ':' part_or_name : {dvar, {unwrap('$1'), '$3'}}.
@@ -51,7 +51,7 @@ as_part -> pvar                  : '$1'.
 as_clause -> as_part               : ['$1'].
 as_clause -> as_part '.' as_clause : ['$1'] ++ '$3'.
 
-maybe_math -> math1 : '$1'.
+math -> math1 : '$1'.
 
 
 math1 -> math1 '-' math1: #{op => fcall,
@@ -101,10 +101,8 @@ calculatable -> selector : '$1'.
 
 
 fun_arg -> int_or_time : '$1'.
-%%fun_arg -> calculatable : '$1'.
-fun_arg -> maybe_math : '$1'.
-%%fun_arg -> integer : '$1'.
-fun_arg -> float : '$1'.
+fun_arg -> math        : '$1'.
+fun_arg -> float       : '$1'.
 
 
 %% number -> integer : unwrap('$1').
