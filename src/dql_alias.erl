@@ -81,8 +81,12 @@ resolve_statement(O = #{op  := fcall,
             {O#{args => Args#{inputs => Input2}}, A1}
     end;
 resolve_statement(O = #{op := named, args := [N, Q]}, Aliases) ->
-    {Q1, A1} = resolve_statement(Q, Aliases),
-    {O#{args => [N, Q1]}, A1};
+    case resolve_statement(Q, Aliases) of
+        {error, _} = E ->
+            E;
+        {Q1, A1} ->
+            {O#{args => [N, Q1]}, A1}
+    end;
 resolve_statement(#{op := var, args := [V]}, Aliases) ->
     case gb_trees:lookup(V, Aliases) of
         {value, G} ->
