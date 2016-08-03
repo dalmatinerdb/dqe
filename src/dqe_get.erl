@@ -40,7 +40,7 @@ start(run,
             dflow:start(self(), run),
             {emit, mmath_bin:realize(mmath_bin:empty(Chunk)), State1};
         {ok, _Res, Data} ->
-            dflow:start(self(), 1),
+            dflow:start(self(), run),
             {emit, mmath_bin:realize(Data), State1}
     end;
 
