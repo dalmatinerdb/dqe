@@ -42,6 +42,12 @@ init() ->
                 dqe_derivate,
                 dqe_confidence
                ],
+    ArithFuns = [
+                 dqe_add_arith,
+                 dqe_sub_arith,
+                 dqe_divide_arith,
+                 dqe_mul_arith
+                ],
     CombFuns = [
                 dqe_avg_comb,
                 dqe_sum_comb,
@@ -50,7 +56,7 @@ init() ->
                 dqe_quotient_comb,
                 dqe_max_comb
                ],
-    AllFuns = AggrFuns ++ CombFuns,
+    AllFuns = AggrFuns ++ ArithFuns ++ CombFuns,
     [dqe_fun:reg(F) || F <- AllFuns].
 
 %%--------------------------------------------------------------------

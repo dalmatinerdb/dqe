@@ -3,7 +3,7 @@ Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause perhaps_shifted
-math math1 math2.
+math math1 math2 number number2 number3.
 
 %% hist  calculatables.
 
@@ -60,12 +60,12 @@ math1 -> math1 '-' math1: #{op => fcall,
 math1 -> math1 '+' math1 : #{op => fcall,
                              args => #{name => <<"sum">>,
                                        inputs => ['$1', '$3']}}.
-%% math1 -> math1 '-' number: #{op => fcall,
-%%                              args => #{name => <<"sub">>,
-%%                                        inputs => ['$1', '$3']}}.
-%% math1 -> math1 '+' number: #{op => fcall,
-%%                              args => #{name => <<"add">>,
-%%                                        inputs => ['$1', '$3']}}.
+math1 -> math1 '-' number: #{op => fcall,
+                             args => #{name => <<"sub">>,
+                                       inputs => ['$1', '$3']}}.
+math1 -> math1 '+' number: #{op => fcall,
+                             args => #{name => <<"add">>,
+                                       inputs => ['$1', '$3']}}.
 
 math1 -> math2 : '$1'.
 
@@ -105,8 +105,17 @@ fun_arg -> math        : '$1'.
 fun_arg -> float       : '$1'.
 
 
-%% number -> integer : unwrap('$1').
-%% number -> float   : unwrap('$1').
+number -> number '+' number: '$1' + '$3'.
+number -> number '-' number: '$1' - '$3'.
+number -> number2 : '$1'.
+
+number2 -> number2 '*' number2: '$1' * '$3'.
+number2 -> number2 '/' number2: '$1' / '$3'.
+number2 -> number3 : '$1'.
+
+number3 -> integer : unwrap('$1').
+number3 -> float   : unwrap('$1').
+number3 -> '(' number ')' : '$2'.
 
 fun_args -> fun_arg : ['$1'].
 fun_args -> fun_arg ',' fun_args : ['$1'] ++ '$3'.
@@ -114,7 +123,6 @@ fun_args -> fun_arg ',' fun_args : ['$1'] ++ '$3'.
 fun -> part_or_name '(' fun_args ')' : #{op => fcall,
                                          args => #{name => '$1',
                                                    inputs => '$3'}}.
-
 
 %% %% Histogram based aggregation functiosn
 %% fun -> mm         '(' hist          ')' : {hfun, unwrap('$1'), '$3'}.

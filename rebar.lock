@@ -3,7 +3,7 @@
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.5">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.5">>},0},
  {<<"dproto">>,{pkg,<<"dproto">>,<<"0.1.19">>},0},
- {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.7">>},0},
+ {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.1.9">>},0},
  {<<"dqe_idx">>,{pkg,<<"dqe_idx">>,<<"0.1.18">>},0},
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.1.13">>},0},
  {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.2.10">>},0},
@@ -13,7 +13,7 @@
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.8">>},1},
  {<<"hdr_histogram">>,{pkg,<<"hdr_histogram">>,<<"0.2.0">>},0},
  {<<"lager">>,{pkg,<<"lager">>,<<"3.2.1">>},0},
- {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.4">>},0},
+ {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.5">>},0},
  {<<"pgapp">>,{pkg,<<"pgapp">>,<<"0.0.1">>},1},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},1},
  {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0}].
