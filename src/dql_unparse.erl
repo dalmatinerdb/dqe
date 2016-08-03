@@ -107,6 +107,8 @@ unparse_tag({tag, N, K}) ->
     <<"'", N/binary, "':'", K/binary, "'">>.
 unparse_where({'=', T, V}) ->
     <<(unparse_tag(T))/binary, " = '", V/binary, "'">>;
+unparse_where({'!=', T, V}) ->
+    <<(unparse_tag(T))/binary, " != '", V/binary, "'">>;
 unparse_where({'or', Clause1, Clause2}) ->
     P1 = unparse_where(Clause1),
     P2 = unparse_where(Clause2),

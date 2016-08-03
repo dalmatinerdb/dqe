@@ -222,7 +222,8 @@ tag() ->
        {1,  {tag, <<>>, non_empty_binary()}}]).
 
 where_clause(S) when S =< 1 ->
-    {'=', tag(), non_empty_binary()};
+    oneof([{'=', tag(), non_empty_binary()},
+           {'!=', tag(), non_empty_binary()}]);
 where_clause(S) ->
     ?LAZY(?LET(N, choose(0, S - 1), where_clause_choice(N, S))).
 
@@ -267,7 +268,7 @@ glob_element(Size) ->
           {L, G, M}, glob(Size-1),
           {[non_empty_string() | L], ["*" | G], M})).
 
-prop_qery_parse_unparse() ->
+prop_query_parse_unparse() ->
     ?FORALL(T, select_stmt(),
             begin
                 Unparsed = dql_unparse:unparse(T),
