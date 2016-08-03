@@ -10,7 +10,7 @@ Terminals '(' ')' ',' '.' '*' '/' '=' ':'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
-kw_by.
+kw_by kw_not op_ne.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -133,9 +133,11 @@ mfrom -> metric kw_from bucket kw_where where : ['$3', '$1', '$5'].
 tag -> part_or_name                  : {tag, <<>>, '$1'}.
 tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.
 
-where_part -> tag '=' part_or_name : {'=', '$1', '$3'}.
-where_part -> tag                  : {'=', '$1', <<>>}.
-where_part -> '(' where ')'        : '$2'.
+where_part -> tag '=' part_or_name    : {'=', '$1', '$3'}.
+where_part -> tag op_ne part_or_name  : {'!=', '$1', '$3'}.
+where_part -> tag kw_not part_or_name : {'!=', '$1', '$3'}.
+where_part -> tag                     : {'=', '$1', <<>>}.
+where_part -> '(' where ')'           : '$2'.
 
 where -> where_part              : '$1'.
 where -> where kw_and where_part : {'and', '$1', '$3'}.

@@ -11,3 +11,4 @@ current_counterexample.eqc
 rebar3.crashdump
 .rebar3
 log
+_checkouts/

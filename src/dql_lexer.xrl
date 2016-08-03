@@ -35,8 +35,8 @@ FOR     = [Ff][Oo][Rr]
 WHERE   = [Ww][Hh][Ee][Rr][Ee]
 SHIFT   = [Ss][Hh][Ii][Ff][Tt]
 BY      = [Bb][Yy]
-
-
+NOT     = [Nn][Oo][Tt]
+OP_NE   = (!=)
 
 Rules.
 {SELECT}    :   {token, {kw_select,     TokenLine}}.
@@ -57,11 +57,14 @@ Rules.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
 {SHIFT}     :   {token, {kw_shift,      TokenLine}}.
 {BY}        :   {token, {kw_by,         TokenLine}}.
+{NOT}       :   {token, {kw_not,        TokenLine}}.
+
+{OP_NE}     :   {token, {op_ne,         TokenLine}}.
 
 {TIME}      :   {token, {time,          TokenLine, a(TokenChars)}}.
 
-{Sign}{Digit}+ : {token, {integer,       TokenLine, i(TokenChars)}}.
-{Sign}{Float}  : {token, {float,         TokenLine, f(TokenChars)}}.
+{Sign}{Digit}+ : {token, {integer,      TokenLine, i(TokenChars)}}.
+{Sign}{Float}  : {token, {float,        TokenLine, f(TokenChars)}}.
 
 {PART}      :   S = strip(TokenChars,   TokenLen),
                 {token, {part,          TokenLine, b(S)}}.
