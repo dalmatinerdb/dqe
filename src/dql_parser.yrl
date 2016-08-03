@@ -2,11 +2,12 @@
 Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
-infix mfrom var metric where where_part as_part as_clause perhaps_shifted.
+mfrom var metric where where_part as_part as_clause perhaps_shifted
+math math1 math2 number number2 number3.
 
 %% hist  calculatables.
 
-Terminals '(' ')' ',' '.' '*' '/' '=' ':'
+Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
@@ -15,7 +16,6 @@ kw_by.
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
 %% confidence.
-
 
 %%%===================================================================
 %%% Root statement
@@ -40,8 +40,8 @@ perhaps_shifted -> fune : '$1'.
 
 %% Element in the function list, either a calculatable or a calculatable
 %% with a name
-fune -> calculatable kw_as as_clause : named('$3', '$1').
-fune -> calculatable : '$1'.
+fune -> math kw_as as_clause : named('$3', '$1').
+fune -> math : '$1'.
 
 as_part -> part_or_name          : '$1'.
 as_part -> dvar ':' part_or_name : {dvar, {unwrap('$1'), '$3'}}.
@@ -51,6 +51,39 @@ as_part -> pvar                  : '$1'.
 as_clause -> as_part               : ['$1'].
 as_clause -> as_part '.' as_clause : ['$1'] ++ '$3'.
 
+math -> math1 : '$1'.
+
+
+math1 -> math1 '-' math1: #{op => fcall,
+                            args => #{name => <<"diff">>,
+                                      inputs => ['$1', '$3']}}.
+math1 -> math1 '+' math1 : #{op => fcall,
+                             args => #{name => <<"sum">>,
+                                       inputs => ['$1', '$3']}}.
+math1 -> math1 '-' number: #{op => fcall,
+                             args => #{name => <<"sub">>,
+                                       inputs => ['$1', '$3']}}.
+math1 -> math1 '+' number: #{op => fcall,
+                             args => #{name => <<"add">>,
+                                       inputs => ['$1', '$3']}}.
+
+math1 -> math2 : '$1'.
+
+math2 -> math2 '*' math2 : #{op => fcall,
+                             args => #{name => <<"product">>,
+                                       inputs => ['$1', '$3']}}.
+math2 -> math2 '/' math2 : #{op => fcall,
+                             args => #{name => <<"quotient">>,
+                                       inputs => ['$1', '$3']}}.
+%% math2 -> math2 '*' number : #{op => fcall,
+%%                               args => #{name => <<"multiply">>,
+%%                                         inputs => ['$1', '$3']}}.
+%% math2 -> math2 '/' number : #{op => fcall,
+%%                              args => #{name => <<"divide">>,
+%%                                        inputs => ['$1', '$3']}}.
+math2 -> '(' math1 ')' : '$2'.
+math2 -> calculatable : '$1'.
+
 %% Something that can be calculated:
 %% * a function that can be resolved
 calculatable -> fun : '$1'.
@@ -59,7 +92,6 @@ calculatable -> var : '$1'.
 %% * a selector that can be retrived
 calculatable -> selector : '$1'.
 %% * a mathematical expression
-calculatable -> infix : '$1'.
 
 %% calculatables -> calculatable : ['$1'].
 %% calculatables -> calculatable ',' calculatables : ['$1'] ++ '$3'.
@@ -67,10 +99,23 @@ calculatable -> infix : '$1'.
 %% hist -> histogram '(' integer ',' integer ',' calculatable ',' int_or_time ')'
 %%             : {histogram, unwrap('$3'), unwrap('$5'), '$7', '$9'}.
 
+
 fun_arg -> int_or_time : '$1'.
-fun_arg -> calculatable : '$1'.
-%%fun_arg -> integer : '$1'.
-fun_arg -> float : '$1'.
+fun_arg -> math        : '$1'.
+fun_arg -> float       : '$1'.
+
+
+number -> number '+' number: '$1' + '$3'.
+number -> number '-' number: '$1' - '$3'.
+number -> number2 : '$1'.
+
+number2 -> number2 '*' number2: '$1' * '$3'.
+number2 -> number2 '/' number2: '$1' / '$3'.
+number2 -> number3 : '$1'.
+
+number3 -> integer : unwrap('$1').
+number3 -> float   : unwrap('$1').
+number3 -> '(' number ')' : '$2'.
 
 fun_args -> fun_arg : ['$1'].
 fun_args -> fun_arg ',' fun_args : ['$1'] ++ '$3'.
@@ -95,9 +140,6 @@ fun -> part_or_name '(' fun_args ')' : #{op => fcall,
 %% fun -> caggr      '(' calculatables ')' : {combine, unwrap('$1'), '$3'}.
 %% fun -> caggr      '(' calculatable  ',' int_or_time ')' : {aggr, unwrap('$1'), '$3', '$5'}.
 %% fun -> math       '(' calculatable  ',' integer ')' : {math, unwrap('$1'), '$3', unwrap('$5')}.
-
-infix -> calculatable '/' integer : {math, divide, '$1', unwrap('$3')}.
-infix -> calculatable '*' integer : {math, multiply, '$1', unwrap('$3')}.
 
 %% A variable.
 var -> part_or_name : #{op => var, args => ['$1']}.
