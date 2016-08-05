@@ -256,7 +256,7 @@ time(T, U) ->
       op => time,
       args => [T, U],
       signature => [integer, time_unit],
-      return => integer
+      return => time
      }.
 
 named(N, Q) ->

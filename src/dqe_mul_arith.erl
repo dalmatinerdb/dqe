@@ -31,7 +31,7 @@ run([Data], S = #state{const = Const}) ->
     {mmath_trans:mul(Data, Const), S}.
 
 help() ->
-    <<"Multiples  each element of the series with a constant. This is "
+    <<"Multiplies each element of the series with a constant. This is "
       "equivalent to the infix opperator * when the right argument is a "
       "number.">>.
 

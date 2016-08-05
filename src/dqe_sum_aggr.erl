@@ -24,7 +24,7 @@ describe(#state{time = Time}) ->
     ["sum(", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"sum">>, [metric, integer], none, metric}.
+    {<<"sum">>, [metric, time], none, metric}.
 
 run([Data], S = #state{count = Count}) ->
     {mmath_aggr:sum(Data, Count), S}.

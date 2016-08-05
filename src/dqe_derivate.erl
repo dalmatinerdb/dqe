@@ -28,5 +28,5 @@ run([Data], S = #state{}) ->
 
 help() ->
     <<"Calculates the derivate of a series so that v(t) = v(t - 1) - v(t). As "
-      "this looses one element of the series the first element v(0) and v(1) "
+      "this loses one element of the series the first element v(0) and v(1) "
       "are always equal.">>.

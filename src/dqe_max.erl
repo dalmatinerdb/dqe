@@ -24,7 +24,7 @@ describe(#state{time = Time}) ->
     ["max(", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"max">>, [metric, integer], none, metric}.
+    {<<"max">>, [metric, time], none, metric}.
 
 run([Data], S = #state{count = Count}) ->
     {mmath_aggr:max(Data, Count), S}.
