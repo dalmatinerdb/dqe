@@ -1,11 +1,11 @@
 %% -*- erlang -*-
 
 %% @doc The chunk size used to read from the backend.
-{mapping, "chunk", "dqe.get_chunk",
+{mapping, "dqe.chunk", "dqe.get_chunk",
  [{default, 100000},
   {datatype, integer}]}.
 
 %% @doc Maximum length for a single query
-{mapping, "max_read", "dqe.max_read",
+{mapping, "dqe.max_read", "dqe.max_read",
  [{default, 1209600},
   {datatype, integer}]}.
