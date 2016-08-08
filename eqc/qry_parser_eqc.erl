@@ -23,6 +23,9 @@ non_empty_binary() ->
 pos_int() ->
     ?SUCHTHAT(N, int(), N > 0).
 
+pos_real() ->
+    ?SUCHTHAT(R, real(), R > 0).
+
 time_unit() ->
     oneof([ms, s, m, h, d, w]).
 
@@ -80,11 +83,18 @@ aggr_tree(Size) ->
          [
           aggr1(Q),
           aggr2(Q),
-          comb(Q)
-%%          {math, multiply, Q, pos_int()},
-%%          {math, divide, Q, pos_int()}
+          comb(Q),
+          arith(Q)
          ])).
 
+arith_fun() ->
+    oneof([<<"add">>, <<"divide">>, <<"mul">>, <<"sub">>]).
+arith_const() ->
+    oneof([pos_int(), pos_real()]).
+arith(Q) ->
+    #{op => fcall,
+      args => #{name => arith_fun(),
+                inputs => [Q, arith_const()]}}.
 
 aggr2_fun() ->
     oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>]).
