@@ -66,6 +66,8 @@ unparse(now) ->
 
 unparse(N) when is_integer(N)->
     <<(integer_to_binary(N))/binary>>;
+unparse(N) when is_float(N) ->
+    <<(float_to_binary(N))/binary>>;
 
 unparse(#{op := lookup, args := [B, M]}) ->
     <<(unparse_metric(M))/binary, " FROM '", B/binary, "'">>;

@@ -102,7 +102,7 @@ calculatable -> selector : '$1'.
 
 fun_arg -> int_or_time : '$1'.
 fun_arg -> math        : '$1'.
-fun_arg -> float       : '$1'.
+fun_arg -> float       : unwrap('$1').
 
 
 number -> number '+' number: '$1' + '$3'.
