@@ -23,7 +23,7 @@ describe(#state{time = Time}) ->
     ["min(", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"min">>, [metric, integer], none, metric}.
+    {<<"min">>, [metric, time], none, metric}.
 
 run([Data], S = #state{count = Count}) ->
     {mmath_aggr:min(Data, Count), S}.

@@ -25,7 +25,7 @@ describe(#state{time = Time}) ->
     ["avg(", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"avg">>, [metric, integer], none, metric}.
+    {<<"avg">>, [metric, time], none, metric}.
 
 run([Data], S = #state{count = Count}) ->
     {mmath_aggr:avg(Data, Count), S}.

@@ -28,12 +28,12 @@ time_unit() ->
 
 time_type() ->
     #{op => time,
-      return => integer,
+      return => time,
       signature => [integer,time_unit],
       args => [pos_int(), time_unit()]}.
 
 aggr_range() ->
-    oneof([time_type(), pos_int()]).
+    time_type().
 
 non_empty_list(T) ->
     ?SUCHTHAT(L, list(T), L /= []).
