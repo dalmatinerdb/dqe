@@ -34,7 +34,9 @@ BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
 FOR     = [Ff][Oo][Rr]
 WHERE   = [Ww][Hh][Ee][Rr][Ee]
 SHIFT   = [Ss][Hh][Ii][Ff][Tt]
+GROUP   = [Gg][Rr][Oo][Uu][Pp]
 BY      = [Bb][Yy]
+USING   = [Uu][Ss][Ii][Nn][Gn]
 NOT     = [Nn][Oo][Tt]
 OP_NE   = (!=)
 
@@ -56,6 +58,8 @@ Rules.
 {FOR}       :   {token, {kw_for,        TokenLine}}.
 {WHERE}     :   {token, {kw_where,      TokenLine}}.
 {SHIFT}     :   {token, {kw_shift,      TokenLine}}.
+{GROUP}     :   {token, {kw_group,      TokenLine}}.
+{USING}     :   {token, {kw_using,      TokenLine}}.
 {BY}        :   {token, {kw_by,         TokenLine}}.
 {NOT}       :   {token, {kw_not,        TokenLine}}.
 
