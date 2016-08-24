@@ -3,8 +3,16 @@
 
 unparse(L) when is_list(L) ->
     Ps = [unparse(Q) || Q <- L],
-    Unparsed = combine(Ps, <<>>),
+    Unparsed = combine(Ps),
     Unparsed;
+
+unparse(#{op := group_by,
+          args := [From, Groupings, #{args := #{name := Function}}]}) ->
+    FromB = unparse(From),
+    Dvars = [unparse_name({dvar, G}) || G <- Groupings],
+    GroupingsB = combine(Dvars),
+    <<FromB/binary, " GROUP BY ", GroupingsB/binary, " USING ",
+      Function/binary>>;
 
 unparse(#{op   := fcall,
           args := #{name      := Name,
@@ -119,6 +127,9 @@ unparse_where({'and', Clause1, Clause2}) ->
     P1 = unparse_where(Clause1),
     P2 = unparse_where(Clause2),
     <<P1/binary, " AND (", P2/binary, ")">>.
+
+combine(L) ->
+    combine(L, <<>>).
 
 combine([], Acc) ->
     Acc;

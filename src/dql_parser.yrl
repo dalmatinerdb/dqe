@@ -2,8 +2,9 @@
 Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
-mfrom var metric where where_part as_part as_clause perhaps_shifted
-math math1 math2 number number2 number3.
+mfrom var metric where where_part as_part as_clause maybe_shifted
+math math1 math2 number number2 number3  maybe_scoped_dvar
+maybe_group_by grouping.
 
 %% hist  calculatables.
 
@@ -11,7 +12,7 @@ Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
-kw_by kw_not op_ne.
+kw_by kw_not op_ne kw_group kw_using.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -31,12 +32,8 @@ select -> kw_select funs kw_alias aliases timeframe : {select, '$2', '$4', '$5'}
 %%%===================================================================
 
 %% List of functions in the select part of the statement
-funs -> perhaps_shifted : ['$1'].
-funs -> perhaps_shifted ',' funs : ['$1'] ++ '$3'.
-
-perhaps_shifted -> fune kw_shift kw_by int_or_time : #{op        => timeshift,
-                                                       args      => ['$4', '$1']}.
-perhaps_shifted -> fune : '$1'.
+funs -> fune : ['$1'].
+funs -> fune ',' funs : ['$1'] ++ '$3'.
 
 %% Element in the function list, either a calculatable or a calculatable
 %% with a name
@@ -44,9 +41,14 @@ fune -> math kw_as as_clause : named('$3', '$1').
 fune -> math : '$1'.
 
 as_part -> part_or_name          : '$1'.
-as_part -> dvar ':' part_or_name : {dvar, {unwrap('$1'), '$3'}}.
-as_part -> dvar                  : {dvar, {<<>>, unwrap('$1')}}.
+as_part -> maybe_scoped_dvar     : {dvar, '$1'}.
 as_part -> pvar                  : '$1'.
+
+
+maybe_scoped_dvar -> dvar ':' part_or_name : {unwrap('$1'), '$3'}.
+maybe_scoped_dvar -> dvar                  : {<<>>, unwrap('$1')}.
+
+
 
 as_clause -> as_part               : ['$1'].
 as_clause -> as_part '.' as_clause : ['$1'] ++ '$3'.
@@ -90,7 +92,7 @@ calculatable -> fun : '$1'.
 %% * a variable that can be looked up
 calculatable -> var : '$1'.
 %% * a selector that can be retrived
-calculatable -> selector : '$1'.
+calculatable -> maybe_shifted : '$1'.
 %% * a mathematical expression
 
 %% calculatables -> calculatable : ['$1'].
@@ -145,6 +147,13 @@ fun -> part_or_name '(' fun_args ')' : #{op => fcall,
 var -> part_or_name : #{op => var, args => ['$1']}.
 
 %% A selector, either a combination of <metric> BUCKET <bucket> or a mget aggregate.
+
+maybe_shifted -> selector kw_shift kw_by int_or_time :
+                     #{op        => timeshift,
+                       args      => ['$4', '$1']}.
+
+maybe_shifted -> selector : '$1'.
+
 selector -> mb : #{
               op        => get,
               args      => '$1',
@@ -157,19 +166,35 @@ selector -> gmb : #{
               signature => [integer, integer, integer, glob, bucket],
               return    => metric
              }.
-selector -> mfrom : #{
-              op => lookup,
-              args => '$1',
-              return => metric
-             }.
+selector -> maybe_group_by : '$1'.
 
 %% A bucket and metric combination used as a solution
 mb -> metric kw_bucket part_or_name : ['$3', '$1'].
 
 gmb -> glob_metric kw_bucket bucket : ['$3', '$1'].
 
-mfrom -> metric kw_from bucket : ['$3', '$1'].
-mfrom -> metric kw_from bucket kw_where where : ['$3', '$1', '$5'].
+maybe_group_by -> mfrom kw_group kw_by grouping kw_using part_or_name :
+                      #{
+                         op => group_by,
+                         args => ['$1', '$4', '$6'],
+                         return => metric
+                       }.
+
+maybe_group_by -> mfrom : '$1'.
+
+grouping -> maybe_scoped_dvar : ['$1'].
+grouping -> maybe_scoped_dvar ',' grouping : ['$1'] ++ '$3'.
+
+mfrom -> metric kw_from bucket : #{
+                          op => lookup,
+                          args => ['$3', '$1'],
+                          return => metric
+                         }.
+mfrom -> metric kw_from bucket kw_where where :#{
+                                          op => lookup,
+                                          args => ['$3', '$1', '$5'],
+                                          return => metric
+                                         }.
 
 
 tag -> part_or_name                  : {tag, <<>>, '$1'}.
@@ -194,7 +219,7 @@ aliases -> alias : ['$1'].
 aliases -> alias ',' aliases  : ['$1'] ++ '$3'.
 
 %% A single alias in the AS statement
-alias -> selector kw_as part_or_name : {alias, '$3', '$1'}.
+alias -> maybe_shifted kw_as part_or_name : {alias, '$3', '$1'}.
 
 %%%===================================================================
 %%% TIEM related symbols
@@ -213,7 +238,6 @@ pit          -> int_or_time kw_ago : #{op => ago, args => ['$1']}.
 pit          -> integer : unwrap('$1').
 pit          -> date : {time, qdate:to_unixtime(unwrap('$1')) * 1000, ms}.
 pit          -> kw_now : now.
-
 
 %% A relative time either given as absolute integer or relative.
 int_or_time  -> integer time : time(unwrap('$1'), unwrap('$2')).

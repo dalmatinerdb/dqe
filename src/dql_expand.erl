@@ -13,6 +13,13 @@
 expand(Qs) ->
     lists:flatten([expand_grouped(Q, []) || Q <- Qs]).
 
+expand_grouped({calc, Chain, #{op := group_by, args := [L, G, Fun]}},
+               Groupings) ->
+    Groupings1 = Groupings ++ G,
+    R = expand_grouped(L, Groupings1),
+    R1 = combine_groupings(R, G, Fun),
+    [{calc, Chain, E} || E <- R1];
+
 expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
     Gs = [N || {dvar, N} <- L],
     [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];
@@ -33,16 +40,17 @@ expand_grouped(Q = #{op := get}, _Groupings) ->
     [Q];
 
 expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric, Where]}, []) ->
+                     args := [Collection, Metric, Where]}, []) ->
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}),
     Q1 = Q#{op := get},
     [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
 
 expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric, Where]}, Groupings) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}, Groupings),
+                     args := [Collection, Metric, Where]}, Groupings) ->
+    Groupings1 = lists:usort(Groupings),
+    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}, Groupings1),
     Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
+    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings1, GVs)}
      || {Bucket, Key, GVs} <- BMs];
 
 expand_grouped(Q = #{op := lookup,
@@ -53,9 +61,10 @@ expand_grouped(Q = #{op := lookup,
 
 expand_grouped(Q = #{op := lookup,
              args := [Collection, Metric]}, Groupings) ->
-    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings),
+    Groupings1 = lists:usort(Groupings),
+    {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings1),
     Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
+    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings1, GVs)}
      || {Bucket, Key, GVs} <- BMs];
 
 expand_grouped(Q = #{op := sget,
@@ -65,3 +74,16 @@ expand_grouped(Q = #{op := sget,
     {ok, {_Bucket, Ms}} = dqe_idx:expand(Bucket, [Glob]),
     Q1 = Q#{op := get},
     [Q1#{args => [Bucket, Key]} || Key <- Ms].
+
+combine_groupings(Rs, Groupings, Fun) ->
+    Rs1 = [append_values(R, Groupings) || R <- Rs],
+    Rs2 = lists:foldl(fun ({K, E}, Acc) ->
+                              orddict:append(K, {calc, [], E}, Acc)
+                      end, orddict:new(), Rs1),
+    [{combine, Fun, E} || {_, E} <- Rs2].
+
+append_values(E = #{
+                groupings := Values
+               }, Gs) ->
+    S = orddict:from_list(Values),
+    {[orddict:fetch(G, S) || G <- Gs], E}.

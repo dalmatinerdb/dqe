@@ -15,10 +15,7 @@ flatten(Qs) ->
 
 -spec flatten_(dql:dqe_fun() | dql:get_stmt()) ->
                       #{op => named, args => [binary() | dql:flat_stmt()]}.
-flatten_(#{op := timeshift, args := [Time, Child]}) ->
-    #{args := [N, C]} = R = flatten_(Child),
-    R#{args := [N, #{op => timeshift, args => [Time, C],
-                     return => get_type(C)}]};
+
 flatten_(#{op := named, args := [N, Child]}) ->
     C = flatten_(Child, []),
     R = get_type(C),
@@ -41,7 +38,16 @@ flatten_(Child = #{return := R}) ->
 
 -spec flatten_(dql:statement(), [dql:dqe_fun()]) ->
                      dql:flat_stmt().
+
+flatten_(#{op := timeshift, args := [Time, Child]}, Chain) ->
+    C = flatten_(Child, Chain),
+    #{op => timeshift, args => [Time, C],
+      return => get_type(C)};
+
 %% flatten_(#{op := timeshift, args := [_Time, Child]}, []) ->
+flatten_(GroupBy = #{op   := group_by}, Chain) ->
+    {calc, Chain, GroupBy};
+
 flatten_(F = #{op   := fcall,
               args := Args = #{inputs := [Child]}}, Chain) ->
     Args1 = maps:remove(inputs, Args),

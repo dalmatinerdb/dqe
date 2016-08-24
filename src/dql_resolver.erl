@@ -45,6 +45,23 @@ resolve_functions(#{op := timeshift, args := [S, Q]}) ->
             E
     end;
 
+resolve_functions(O = #{op := group_by, args := [F, G, Function]}) ->
+    case dqe_fun:lookup(Function, [metric_list]) of
+        {ok,{{_, _, _}, ReturnType, FunMod}} ->
+            FArgs = #{name      => Function,
+                      constants => [],
+                      mod       => FunMod},
+            Fun = #{
+              op => fcall,
+              args => FArgs,
+              signature => [metric_list],
+              return => ReturnType
+             },
+            {ok, O#{args := [F, G, Fun]}};
+        E ->
+            E
+    end;
+
 resolve_functions(#{op := fcall, args := #{name   := Function,
                                            inputs := Args}}) ->
     case resolve_functions(Args, []) of
