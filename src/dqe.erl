@@ -245,7 +245,38 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
 translate({calc, [], G}) ->
     translate(G);
 
+translate({calc,
+           [#{op := fcall,
+              args := #{
+                    mod := Mod,
+               state := State
+              }} | Aggrs],
+           #{op := get, args := Args}}) ->
+    FoldFn = fun(#{op := fcall,
+                   args := #{
+                         mod := ModX,
+                     state := StateX
+                    }}, Acc) ->
+                     {dqe_fun_flow, [ModX, StateX, Acc]}
+             end,
+    #{resolution := R} = lists:last(Aggrs),
+    G1 = {dqe_get_fun, [Mod, State] ++ Args},
+    {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
+
+translate({calc,
+           [#{op := fcall,
+              resolution := R,
+              args :=
+                  #{
+                    mod := Mod,
+                state := State
+              }}],
+           #{op := get, args := Args}}) ->
+    G1 = {dqe_get_fun, [Mod, State] ++ Args},
+    {ok, R, G1};
+
 %% TODO we can do this better!
+
 translate({calc, Aggrs, G}) ->
     FoldFn = fun(#{op := fcall,
                    args := #{
