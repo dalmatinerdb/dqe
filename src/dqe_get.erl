@@ -36,10 +36,10 @@ start(run,
     case ddb_connection:get(Bucket, Key, Start, Chunk) of
         {error, _Error} ->
             {done, State};
-        {ok, _Res, <<>>} ->
+        {ok, <<>>} ->
             dflow:start(self(), run),
             {emit, mmath_bin:realize(mmath_bin:empty(Chunk)), State1};
-        {ok, _Res, Data} ->
+        {ok, Data} ->
             dflow:start(self(), run),
             {emit, mmath_bin:realize(Data), State1}
     end;
