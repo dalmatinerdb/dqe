@@ -247,6 +247,18 @@ translate({calc, [], G}) ->
 
 translate({calc,
            [#{op := fcall,
+              resolution := R,
+              args :=
+                  #{
+                    mod := Mod,
+                state := State
+              }}],
+           #{op := get, args := Args}}) ->
+    G1 = {dqe_get_fun, [Mod, State] ++ Args},
+    {ok, R, G1};
+
+translate({calc,
+           [#{op := fcall,
               args := #{
                     mod := Mod,
                state := State
@@ -262,18 +274,6 @@ translate({calc,
     #{resolution := R} = lists:last(Aggrs),
     G1 = {dqe_get_fun, [Mod, State] ++ Args},
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
-
-translate({calc,
-           [#{op := fcall,
-              resolution := R,
-              args :=
-                  #{
-                    mod := Mod,
-                state := State
-              }}],
-           #{op := get, args := Args}}) ->
-    G1 = {dqe_get_fun, [Mod, State] ++ Args},
-    {ok, R, G1};
 
 %% TODO we can do this better!
 
