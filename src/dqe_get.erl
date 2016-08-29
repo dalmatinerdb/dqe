@@ -49,9 +49,9 @@ start(run, State = #state{start = Start, count = Count,
     case ddb_connection:get(Bucket, Key, Start, Count) of
         {error, _Error} ->
             {done, State};
-        {ok, _Res, <<>>} ->
+        {ok, <<>>} ->
             {done, mmath_bin:realize(mmath_bin:empty(Count)), State};
-        {ok, _Res, Data} ->
+        {ok, Data} ->
             {done, mmath_bin:realize(Data), State}
     end.
 
