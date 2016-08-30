@@ -23,7 +23,7 @@ spec() ->
     {<<"max">>, [histogram], none, metric}.
 
 run([Data], S) ->
-    R = mmath_bin:from_list([hdr_histogram:max(H) || H <- Data]),
+    R = dqe_hist:compute(fun hdr_histogram:max/1, Data),
     {R, S}.
 
 help() ->

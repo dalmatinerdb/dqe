@@ -23,7 +23,7 @@ spec() ->
     {<<"percentile">>, [histogram, float], none, metric}.
 
 run([Data], S = #state{percentile = Percentile}) ->
-    R = mmath_bin:from_list([hdr_histogram:percentile(H, Percentile) || H <- Data]),
+    R = dqe_hist:compute(fun hdr_histogram:percentile/2, Percentile, Data),
     {R, S}.
 
 help() ->

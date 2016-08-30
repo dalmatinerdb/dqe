@@ -23,7 +23,7 @@ spec() ->
     {<<"median">>, [histogram], none, metric}.
 
 run([Data], S) ->
-    R = mmath_bin:from_list([hdr_histogram:median(H) || H <- Data]),
+    R = dqe_hist:compute(fun hdr_histogram:median/1, Data),
     {R, S}.
 
 help() ->

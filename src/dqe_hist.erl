@@ -3,7 +3,8 @@
 
 -include_lib("mmath/include/mmath.hrl").
 
--export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0]).
+-export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0,
+         compute/2, compute/3]).
 
 -record(state, {
           time :: pos_integer(),
@@ -54,3 +55,9 @@ mk_hist(HVT, SF, Data) ->
     Values = mmath_bin:to_list(mmath_bin:derealize(Data)),
     [hdr_histogram:record(H, round(V)) || V <- Values],
     H.
+
+compute(F, Data) ->
+    mmath_bin:realize(mmath_bin:from_list([F(H) || H <- Data])).
+
+compute(F, A, Data) ->
+    mmath_bin:realize(mmath_bin:from_list([F(H, A) || H <- Data])).
