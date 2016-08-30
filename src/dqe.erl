@@ -56,7 +56,16 @@ init() ->
                 dqe_quotient_comb,
                 dqe_max_comb
                ],
-    AllFuns = AggrFuns ++ ArithFuns ++ CombFuns,
+    HistFuns = [
+                dqe_hist,
+                dqe_hist_max,
+                dqe_hist_min,
+                dqe_hist_mean,
+                dqe_hist_median,
+                dqe_hist_precentile,
+                dqe_hist_stddev
+               ],
+    AllFuns = AggrFuns ++ ArithFuns ++ CombFuns ++ HistFuns,
     [dqe_fun:reg(F) || F <- AllFuns].
 
 %%--------------------------------------------------------------------
