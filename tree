@@ -1,6 +1,6 @@
 [0m└─ dqe─0.3.16
-   ├─ ddb_connection─0.1.11
-   │  ├─ ddb_client─0.1.29
+   ├─ ddb_connection─0.1.12
+   │  ├─ ddb_client─0.1.30
    │  └─ poolboy─1.5.1
    ├─ dflow─0.1.5
    ├─ dproto─0.1.23
