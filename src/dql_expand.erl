@@ -42,38 +42,41 @@ expand_grouped(Q = #{op := get}, _Groupings) ->
 expand_grouped(Q = #{op := lookup,
                      args := [Collection, Metric, Where]}, []) ->
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
+    expand_lookup(Q, BMs, []);
 
 expand_grouped(Q = #{op := lookup,
                      args := [Collection, Metric, Where]}, Groupings) ->
     Groupings1 = lists:usort(Groupings),
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}, Groupings1),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings1, GVs)}
-     || {Bucket, Key, GVs} <- BMs];
+    expand_lookup(Q, BMs, Groupings);
 
 expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric]}, []) ->
+                     args := [Collection, Metric]}, []) ->
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
+    expand_lookup(Q, BMs, []);
 
 expand_grouped(Q = #{op := lookup,
-             args := [Collection, Metric]}, Groupings) ->
+                     args := [Collection, Metric]}, Groupings) ->
     Groupings1 = lists:usort(Groupings),
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings1),
-    Q1 = Q#{op := get},
-    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings1, GVs)}
-     || {Bucket, Key, GVs} <- BMs];
+    expand_lookup(Q, BMs, Groupings);
 
 expand_grouped(Q = #{op := sget,
-             args := [Bucket, Glob]}, _Groupings) ->
+                     args := [Bucket, Glob]}, _Groupings) ->
     %% Glob is in an extra list since expand is build to use one or more
     %% globs
     {ok, {_Bucket, Ms}} = dqe_idx:expand(Bucket, [Glob]),
     Q1 = Q#{op := get},
     [Q1#{args => [Bucket, Key]} || Key <- Ms].
+
+expand_lookup(Q, BMs, []) ->
+    Q1 = Q#{op := get},
+    [Q1#{args => [Bucket, Key]} || {Bucket, Key} <- BMs];
+
+expand_lookup(Q, BMs, Groupings) ->
+    Q1 = Q#{op := get},
+    [Q1#{args => [Bucket, Key], groupings => lists:zip(Groupings, GVs)}
+     || {Bucket, Key, GVs} <- BMs].
 
 combine_groupings(Rs, Groupings, Fun) ->
     Rs1 = [append_values(R, Groupings) || R <- Rs],
