@@ -77,6 +77,11 @@ unparse(N) when is_integer(N)->
 unparse(N) when is_float(N) ->
     <<(float_to_binary(N))/binary>>;
 
+unparse(#{op := lookup, args := [B, undefined]}) ->
+    <<"ALL FROM '", B/binary, "'">>;
+unparse(#{op := lookup, args := [B, undefined, Where]}) ->
+    <<"ALL FROM '", B/binary,
+      "' WHERE ", (unparse_where(Where))/binary>>;
 unparse(#{op := lookup, args := [B, M]}) ->
     <<(unparse_metric(M))/binary, " FROM '", B/binary, "'">>;
 unparse(#{op := lookup, args := [B, M, Where]}) ->
