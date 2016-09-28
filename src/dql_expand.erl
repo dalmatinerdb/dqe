@@ -48,7 +48,7 @@ expand_grouped(Q = #{op := lookup,
                      args := [Collection, Metric, Where]}, Groupings) ->
     Groupings1 = lists:usort(Groupings),
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric, Where}, Groupings1),
-    expand_lookup(Q, BMs, Groupings);
+    expand_lookup(Q, BMs, Groupings1);
 
 expand_grouped(Q = #{op := lookup,
                      args := [Collection, Metric]}, []) ->
@@ -59,7 +59,7 @@ expand_grouped(Q = #{op := lookup,
                      args := [Collection, Metric]}, Groupings) ->
     Groupings1 = lists:usort(Groupings),
     {ok, BMs} = dqe_idx:lookup({in, Collection, Metric}, Groupings1),
-    expand_lookup(Q, BMs, Groupings);
+    expand_lookup(Q, BMs, Groupings1);
 
 expand_grouped(Q = #{op := sget,
                      args := [Bucket, Glob]}, _Groupings) ->
