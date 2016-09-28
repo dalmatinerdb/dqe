@@ -4,7 +4,7 @@ funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause maybe_shifted
 math math1 math2 number number2 number3  maybe_scoped_dvar
-maybe_group_by grouping.
+maybe_group_by grouping metric_or_all.
 
 %% hist  calculatables.
 
@@ -185,29 +185,20 @@ maybe_group_by -> mfrom : '$1'.
 grouping -> maybe_scoped_dvar : ['$1'].
 grouping -> maybe_scoped_dvar ',' grouping : ['$1'] ++ '$3'.
 
-mfrom -> kw_all kw_from bucket : #{
-                          op => lookup,
-                          args => ['$3', undefined],
-                          return => metric
-                        }.
+mfrom -> metric_or_all kw_from bucket : #{
+                                 op => lookup,
+                                 args => ['$3', '$1'],
+                                 return => metric
+                                }.
 
-mfrom -> kw_all kw_from bucket kw_where where :#{
-                                          op => lookup,
-                                          args => ['$3', undefined, '$5'],
-                                          return => metric
-                                         }.
-
-mfrom -> metric kw_from bucket : #{
-                          op => lookup,
-                          args => ['$3', '$1'],
-                          return => metric
-                         }.
-
-mfrom -> metric kw_from bucket kw_where where :#{
+mfrom -> metric_or_all kw_from bucket kw_where where :#{
                                           op => lookup,
                                           args => ['$3', '$1', '$5'],
                                           return => metric
                                          }.
+
+metric_or_all -> kw_all : undefined.
+metric_or_all -> metric : '$1'.
 
 tag -> part_or_name                  : {tag, <<>>, '$1'}.
 tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.
