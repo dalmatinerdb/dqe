@@ -37,6 +37,7 @@ GROUP   = [Gg][Rr][Oo][Uu][Pp]
 BY      = [Bb][Yy]
 USING   = [Uu][Ss][Ii][Nn][Gn]
 NOT     = [Nn][Oo][Tt]
+ALL     = [Aa][Ll][Ll]
 OP_NE   = (!=)
 
 Rules.
@@ -61,6 +62,7 @@ Rules.
 {USING}     :   {token, {kw_using,      TokenLine}}.
 {BY}        :   {token, {kw_by,         TokenLine}}.
 {NOT}       :   {token, {kw_not,        TokenLine}}.
+{ALL}       :   {token, {kw_all,        TokenLine}}.
 
 {OP_NE}     :   {token, {op_ne,         TokenLine}}.
 
