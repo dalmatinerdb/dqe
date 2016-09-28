@@ -12,7 +12,7 @@ Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
-kw_by kw_not op_ne kw_group kw_using.
+kw_by kw_not op_ne kw_group kw_using kw_all.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -185,17 +185,29 @@ maybe_group_by -> mfrom : '$1'.
 grouping -> maybe_scoped_dvar : ['$1'].
 grouping -> maybe_scoped_dvar ',' grouping : ['$1'] ++ '$3'.
 
+mfrom -> kw_all kw_from bucket : #{
+                          op => lookup,
+                          args => ['$3', undefined],
+                          return => metric
+                        }.
+
+mfrom -> kw_all kw_from bucket kw_where where :#{
+                                          op => lookup,
+                                          args => ['$3', undefined],
+                                          return => metric
+                                         }.
+
 mfrom -> metric kw_from bucket : #{
                           op => lookup,
                           args => ['$3', '$1'],
                           return => metric
                          }.
+
 mfrom -> metric kw_from bucket kw_where where :#{
                                           op => lookup,
                                           args => ['$3', '$1', '$5'],
                                           return => metric
                                          }.
-
 
 tag -> part_or_name                  : {tag, <<>>, '$1'}.
 tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.

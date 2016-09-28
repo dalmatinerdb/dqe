@@ -190,7 +190,6 @@ qry_tree(S) when S < 1->
            lookup()
           ]);
 
-
 qry_tree(Size) ->
     ?LAZY(frequency(
             [
@@ -204,6 +203,9 @@ bucket() ->
 
 metric() ->
     non_empty_list(non_empty_binary()).
+
+lqry_metric() ->
+    oneof([metric(), undefined]).
 
 glob_metric() ->
     ?SUCHTHAT(L,
@@ -222,9 +224,9 @@ lookup() ->
       args => ?SIZED(S, lookup(S))}.
 
 lookup(0) ->
-    [bucket(), metric()];
+    [bucket(), lqry_metric()];
 lookup(S) ->
-    [bucket(), metric(), where_clause(S)].
+    [bucket(), lqry_metric(), where_clause(S)].
 
 tag() ->
     frequency(
