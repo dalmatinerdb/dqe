@@ -167,9 +167,8 @@ run(Query, Timeout) ->
 %%--------------------------------------------------------------------
 
 -spec prepare(Query :: dql:raw_query()) ->
-                     {ok, {Total  :: pos_integer(),
-                           Unique :: pos_integer(),
-                           Count  :: pos_integer(),
+                     {ok, {Total  :: non_neg_integer(),
+                           Unique :: non_neg_integer(),
                            DFlows :: [dflow:step()]},
                         Start :: pos_integer()} |
                      {error, _}.
