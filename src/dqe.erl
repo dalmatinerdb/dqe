@@ -98,7 +98,7 @@ error_string({error, B}) when is_binary(B) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec run(Query :: string()) ->
+-spec run(Query :: dql:raw_query()) ->
                  {'ok', pos_integer(), query_reply()} |
                  query_error().
 run(Query) ->
@@ -113,7 +113,7 @@ run(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec run(Query :: string(), Timeout :: pos_integer() | infinity) ->
+-spec run(Query :: dql:raw_query(), Timeout :: pos_integer() | infinity) ->
                  {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
 
@@ -166,7 +166,7 @@ run(Query, Timeout) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec prepare(Query :: string()) ->
+-spec prepare(Query :: dql:raw_query()) ->
                      {ok, {Total  :: pos_integer(),
                            Unique :: pos_integer(),
                            Count  :: pos_integer(),
