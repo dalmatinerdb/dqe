@@ -6,7 +6,7 @@
 -endif.
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
-              statement/0, named/0, time/0, raw_query/0]).
+              statement/0, named/0, time/0, raw_query/0, limit/0]).
 
 -type time_unit() :: ms | s | m | h | d | w.
 
@@ -60,6 +60,7 @@
         {error, binary()}.
 
 -type alias() :: term().
+-type limit() :: undefined | {top | bottom, pos_integer(), atom()}.
 
 -type raw_query() :: string() | binary().
 
@@ -74,12 +75,12 @@
 %%--------------------------------------------------------------------
 -spec prepare(raw_query()) ->
                      {error, term()} |
-                     {ok, [query_stmt()], pos_integer()}.
+                     {ok, [query_stmt()], pos_integer(), limit()}.
 prepare(S) ->
     case parse(S) of
-        {ok, {select, Qs, Aliases, T}} ->
+        {ok, {select, Qs, Aliases, T, Limit}} ->
             dqe_lib:pdebug('parse', "Query parsed: ~s", [S]),
-            expand_aliases(Qs, Aliases, T);
+            add_limit(Qs, Aliases, T, Limit);
         E ->
             E
     end.
@@ -88,6 +89,36 @@ prepare(S) ->
 %%% Parsing steps
 %%%===================================================================
 
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc Add limit functionality
+%% @end
+%%--------------------------------------------------------------------
+
+add_limit(Qs, Aliases, T, Limit) ->
+    case expand_limit(Limit) of
+        {ok, L1} ->
+            case expand_aliases(Qs, Aliases, T) of
+                {ok, Parts, Start} ->
+                    {ok, Parts, Start, L1};
+                E1 ->
+                    E1
+            end;
+        E2 ->
+            E2
+    end.
+
+expand_limit(undefined) ->
+    {ok, undefined};
+expand_limit({Direction, Count, Function}) ->
+    Types = [metric, time],
+    case dqe_fun:lookup(Function, Types) of
+        {ok,{{_, _, none}, metric, FunMod}} ->
+            {ok, {Direction, Count, FunMod}};
+        _ ->
+            {error, {not_found, Function, Types}}
+    end.
 %%--------------------------------------------------------------------
 %% @private
 %% @doc Expand aliases
@@ -184,7 +215,7 @@ apply_names(Qs, Start) ->
 %%--------------------------------------------------------------------
 -spec parse(raw_query()) ->
                    parser_error() |
-                   {ok, {select, [statement()], [alias()], range()}}.
+                   {ok, {select, [statement()], [alias()], range(), limit()}}.
 
 parse(S) when is_binary(S)->
     parse(binary_to_list(S));

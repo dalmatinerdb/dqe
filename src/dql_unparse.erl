@@ -46,13 +46,13 @@ unparse(#{ op := get, args := [B, M] }) ->
 unparse(#{ op := sget, args := [B, M] }) ->
     <<(unparse_metric(M))/binary, " BUCKET '", B/binary, "'">>;
 
-unparse({select, Q, [], T}) ->
+unparse({select, Q, [], T, L}) ->
     <<"SELECT ", (unparse(Q))/binary, " ",
-      (unparse(T))/binary>>;
+      (unparse(T))/binary, (unparse_limit(L))/binary>>;
 
-unparse({select, Q, A, T}) ->
+unparse({select, Q, A, T, L}) ->
     <<"SELECT ", (unparse(Q))/binary, " ALIAS ", (unparse(A))/binary, " ",
-      (unparse(T))/binary>>;
+      (unparse(T))/binary, (unparse_limit(L))/binary>>;
 
 unparse(#{op := timeshift, args := [T, Q]}) ->
     <<(unparse(Q))/binary, " SHIFT BY ", (unparse(T))/binary>>;
@@ -142,3 +142,10 @@ combine([E | R], <<>>) ->
     combine(R, E);
 combine([E | R], Acc) ->
     combine(R, <<Acc/binary, ", ", E/binary>>).
+
+unparse_limit(undefined) ->
+    <<>>;
+unparse_limit({top, N, Fun}) ->
+    <<" TOP ", (integer_to_binary(N))/binary, " BY ", Fun/binary>>;
+unparse_limit({bottom, N, Fun}) ->
+    <<" BOTTOM ", (integer_to_binary(N))/binary, " BY ", Fun/binary>>.

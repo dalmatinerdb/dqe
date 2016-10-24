@@ -31,7 +31,7 @@ prop_prepare() ->
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case ?P:prepare(Unparsed) of
-                           {ok, _, _} ->
+                           {ok, _, _, _} ->
                                true;
                            {error, E} ->
                                io:format(user, "   ~p~n-> ~p~n-> ~p~n",
@@ -46,7 +46,7 @@ prop_dflow_prepare() ->
                    begin
                        Unparsed = dql_unparse:unparse(T),
                        case dqe:prepare(Unparsed) of
-                           {ok, _, _} ->
+                           {ok, _, _, _} ->
                                true;
                            {error, E} ->
                                io:format(user, "   ~p~n-> ~p~n-> ~p~n",

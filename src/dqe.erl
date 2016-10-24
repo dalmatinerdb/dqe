@@ -120,13 +120,13 @@ run(Query) ->
 run(Query, Timeout) ->
     put(start, erlang:system_time()),
     case prepare(Query) of
-        {ok, {0, 0, _Parts}, _Start} ->
+        {ok, {0, 0, _Parts}, _Start, _Limit} ->
             dqe_lib:pdebug('query', "prepare found no metrics.", []),
             {error, no_results};
-        {ok, {Total, Unique, Parts}, Start} ->
+        {ok, {Total, Unique, Parts}, Start, Limit} ->
             dqe_lib:pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
-            Funnel = {dqe_funnel, [Parts]},
+            Funnel = {dqe_funnel, [Limit, Parts]},
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
             %% We only optimize the flow when there are at least 10% duplicate
             %% gets, or in other words if less then 90% of the requests are
@@ -170,19 +170,20 @@ run(Query, Timeout) ->
                      {ok, {Total  :: non_neg_integer(),
                            Unique :: non_neg_integer(),
                            DFlows :: [dflow:step()]},
-                        Start :: pos_integer()} |
+                        Start :: pos_integer(),
+                      Limit :: dql:limit()} |
                      {error, _}.
 
 prepare(Query) ->
     case dql:prepare(Query) of
-        {ok, Parts, Start} ->
+        {ok, Parts, Start, Limit} ->
             dqe_lib:pdebug('prepare', "Parsing done.", []),
             {Total, Unique} = count_parts(Parts),
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
                            [Total, Unique]),
             {ok, Parts1} = add_collect(Parts, []),
             dqe_lib:pdebug('prepare', "Naming applied.", []),
-            {ok, {Total, Unique, Parts1}, Start};
+            {ok, {Total, Unique, Parts1}, Start, Limit};
         E ->
             io:format("E: ~p~n", [E]),
             E

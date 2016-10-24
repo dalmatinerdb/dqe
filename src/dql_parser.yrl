@@ -4,7 +4,7 @@ funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause maybe_shifted
 math math1 math2 number number2 number3  maybe_scoped_dvar
-maybe_group_by grouping metric_or_all.
+maybe_group_by grouping metric_or_all limit limit_direction.
 
 %% hist  calculatables.
 
@@ -12,7 +12,7 @@ Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
-kw_by kw_not op_ne kw_group kw_using kw_all.
+kw_by kw_not op_ne kw_group kw_using kw_all kw_top kw_bottom.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -24,8 +24,20 @@ kw_by kw_not op_ne kw_group kw_using kw_all.
 Rootsymbol select.
 
 
-select -> kw_select funs timeframe : {select, '$2', [], '$3'}.
-select -> kw_select funs kw_alias aliases timeframe : {select, '$2', '$4', '$5'}.
+select -> kw_select funs timeframe
+              : {select, '$2', [], '$3', undefined}.
+select -> kw_select funs kw_alias aliases timeframe
+              : {select, '$2', '$4', '$5', undefined}.
+select -> kw_select funs timeframe limit
+              : {select, '$2', [], '$3', '$4'}.
+select -> kw_select funs kw_alias aliases timeframe limit
+              : {select, '$2', '$4', '$5', '$6'}.
+
+
+limit -> limit_direction integer kw_by part_or_name : {'$1', unwrap('$2'), '$4'}.
+
+limit_direction -> kw_top    : top.
+limit_direction -> kw_bottom : bottom.
 
 %%%===================================================================
 %%% SELECT part

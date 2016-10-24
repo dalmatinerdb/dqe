@@ -38,6 +38,8 @@ BY      = [Bb][Yy]
 USING   = [Uu][Ss][Ii][Nn][Gn]
 NOT     = [Nn][Oo][Tt]
 ALL     = [Aa][Ll][Ll]
+TOP     = [Tt][Oo][Pp]
+BOTTOM  = [Bb][Oo][Tt][Tt][Oo][Mm]
 OP_NE   = (!=)
 
 Rules.
@@ -63,6 +65,8 @@ Rules.
 {BY}        :   {token, {kw_by,         TokenLine}}.
 {NOT}       :   {token, {kw_not,        TokenLine}}.
 {ALL}       :   {token, {kw_all,        TokenLine}}.
+{TOP}       :   {token, {kw_top,        TokenLine}}.
+{BOTTOM}    :   {token, {kw_bottom,     TokenLine}}.
 
 {OP_NE}     :   {token, {op_ne,         TokenLine}}.
 

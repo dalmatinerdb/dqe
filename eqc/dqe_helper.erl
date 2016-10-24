@@ -67,7 +67,13 @@ select_stmt() ->
             #{op => between, args => [rel_time(), pos_int()]},
             #{op => before, args => [rel_time(), pos_int()]},
             #{op => 'after', args => [pos_int(), pos_int()]}
-           ])}.
+           ]),
+    limit()}.
+
+limit() ->
+    oneof(
+      [undefined,
+       {oneof([top, bottom]), pos_int(), aggr2_fun()}]).
 
 percentile() ->
     ?SUCHTHAT(N, real(), N > 0 andalso N =< 1).
