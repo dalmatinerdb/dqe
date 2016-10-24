@@ -6,17 +6,21 @@
 -endif.
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
-              statement/0, named/0, time/0]).
+              statement/0, named/0, time/0, raw_query/0]).
 
--type time() :: #{ op => time, args => [pos_integer() | ms | s | m | h | d | w]} | pos_integer().
+-type time_unit() :: ms | s | m | h | d | w.
+
+-type time() :: #{ op => time,
+                   args => [pos_integer() | time_unit()]} | pos_integer().
 
 -type relative_time() :: time() |
                          now |
-                         #{ op => 'after' | before, args => [pos_integer() | time()]} |
+                         #{ op => 'after' | before,
+                            args => [pos_integer() | time()]} |
                          #{op => ago, ags => [time()]}.
 
 
--type range() :: #{ op => between, args => [relative_time() | relative_time()]} |
+-type range() :: #{ op => between, args => [relative_time()]} |
                  #{ op => last, args => [time()]}.
 
 -type sig_element() :: string | number | metric.
@@ -57,6 +61,8 @@
 
 -type alias() :: term().
 
+-type raw_query() :: string() | binary().
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -66,7 +72,7 @@
 %% engine to execute.
 %% @end
 %%--------------------------------------------------------------------
--spec prepare(string()) ->
+-spec prepare(raw_query()) ->
                      {error, term()} |
                      {ok, [query_stmt()], pos_integer()}.
 prepare(S) ->
@@ -176,7 +182,7 @@ apply_names(Qs, Start) ->
 %% sensible errors if requried.
 %% @end
 %%--------------------------------------------------------------------
--spec parse(string() | binary()) ->
+-spec parse(raw_query()) ->
                    parser_error() |
                    {ok, {select, [statement()], [alias()], range()}}.
 
