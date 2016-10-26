@@ -1,4 +1,4 @@
--module(dqe_max).
+-module(dqe_max_aggr).
 -behaviour(dqe_fun).
 
 -include_lib("mmath/include/mmath.hrl").

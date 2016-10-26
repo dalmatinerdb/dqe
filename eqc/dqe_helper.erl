@@ -105,19 +105,20 @@ arith(Q) ->
                 inputs => [Q, arith_const()]}}.
 
 aggr2_fun() ->
-    oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>]).
+    oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>, <<"variance">>,
+           <<"stddev">>, <<"median">>]).
 aggr2(Q) ->
     #{op => fcall,
       args => #{name => aggr2_fun(),
                 inputs => [Q, aggr_range()]}}.
 aggr1_fun() ->
-    oneof([<<"derivate">>]).
+    oneof([<<"derivate">>, <<"sqrt">>]).
 aggr1(Q) ->
     #{op => fcall,
       args => #{name => aggr1_fun(),
                 inputs => [Q]}}.
 comb_fun() ->
-    oneof([<<"sum">>]).
+    oneof([<<"sum">>, <<"avg">>, <<"quotient">>, <<"product">>]).
 comb(Q) ->
     #{op => fcall,
       args => #{name => comb_fun(),
