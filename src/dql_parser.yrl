@@ -34,7 +34,7 @@ select -> kw_select funs kw_alias aliases timeframe limit
               : {select, '$2', '$4', '$5', '$6'}.
 
 
-limit -> limit_direction integer kw_by part_or_name : {'$1', unwrap('$2'), '$4'}.
+limit -> limit_direction integer kw_by fun : {'$1', unwrap('$2'), '$4'}.
 
 limit_direction -> kw_top    : top.
 limit_direction -> kw_bottom : bottom.
@@ -134,6 +134,9 @@ number3 -> '(' number ')' : '$2'.
 fun_args -> fun_arg : ['$1'].
 fun_args -> fun_arg ',' fun_args : ['$1'] ++ '$3'.
 
+fun -> part_or_name '(' ')' : #{op => fcall,
+                                args => #{name => '$1',
+                                          inputs => []}}.
 fun -> part_or_name '(' fun_args ')' : #{op => fcall,
                                          args => #{name => '$1',
                                                    inputs => '$3'}}.

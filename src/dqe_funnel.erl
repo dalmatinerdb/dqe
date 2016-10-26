@@ -37,7 +37,8 @@ done(_O, State) ->
 
 apply_limit(Data, undefined) ->
     Data;
-apply_limit(Data, {_, N, _}) when length(Data) =< N ->
+apply_limit(Data, {_, N, _})
+  when length(Data) =< N ->
     Data;
 apply_limit(Data, {Direction, N, Mod}) ->
     Data1 = [calculate_limit_value(E, Mod) ||
@@ -54,9 +55,16 @@ take(Data, top, N) ->
 take(Data, bottom, N) ->
     lists:sublist(Data, N).
 
-calculate_limit_value({N, Data, R}, Mod) ->
+calculate_limit_value({N, Data, R}, 
+                      #{args := #{constants := Cs,
+                                  %%inputs => [#{op => dummy,return => metric}],
+                                  mod := Mod},
+                        op := fcall}) ->
+    io:format("Mod ~p", [Mod]),
+    Cs1 = [C || C <- Cs, not is_map(C)],
+    io:format("Cs ~p", [Cs1]),
     Count = mmath_bin:length_r(Data),
-    S0 = Mod:init([Count]),
+    S0 = Mod:init(Cs1 ++ [Count]),
     {_, S1} = Mod:resolution(1, S0),
     {V, _} = Mod:run([Data], S1),
     [V0] = mmath_bin:to_list(mmath_bin:derealize(V)),

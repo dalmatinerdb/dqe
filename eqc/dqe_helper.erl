@@ -73,7 +73,9 @@ select_stmt() ->
 limit() ->
     oneof(
       [undefined,
-       {oneof([top, bottom]), pos_int(), aggr2_fun()}]).
+       {oneof([top, bottom]), pos_int(),
+        #{op => fcall,
+          args => #{name => aggr2_fun(), inputs => []}}}]).
 
 percentile() ->
     ?SUCHTHAT(N, real(), N > 0 andalso N =< 1).
