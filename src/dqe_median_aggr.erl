@@ -1,8 +1,10 @@
--module(dqe_min).
+-module(dqe_median_aggr).
+-behaviour(dqe_fun).
 
 -include_lib("mmath/include/mmath.hrl").
 
--export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2, help/0]).
+-export([spec/0, describe/1, init/1, chunk/1, resolution/2, run/2,
+         help/0]).
 
 -record(state, {
           time :: pos_integer(),
@@ -20,13 +22,13 @@ resolution(Resolution, State = #state{time = Time}) ->
     {Res, State#state{count = Res}}.
 
 describe(#state{time = Time}) ->
-    ["min(", integer_to_list(Time), "ms)"].
+    ["median(", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"min">>, [metric, time], none, metric}.
+    {<<"median">>, [metric, time], none, metric}.
 
 run([Data], S = #state{count = Count}) ->
-    {mmath_aggr:min(Data, Count), S}.
+    {mmath_aggr:percentile(Data, 0.5, Count), S}.
 
 help() ->
-    <<"Calculates the minimum value of a series over a given period of time">>.
+    <<"Calculates the median over a given period of time.">>.

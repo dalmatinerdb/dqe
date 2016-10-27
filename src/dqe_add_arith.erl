@@ -12,8 +12,8 @@
 init([Const]) when is_number(Const) ->
     #state{const = Const}.
 
-chunk(#state{const = Const}) ->
-    Const * ?RDATA_SIZE.
+chunk(#state{}) ->
+    ?RDATA_SIZE.
 
 resolution(_Resolution, State) ->
     {1, State}.

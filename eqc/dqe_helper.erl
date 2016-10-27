@@ -73,7 +73,9 @@ select_stmt() ->
 limit() ->
     oneof(
       [undefined,
-       {oneof([top, bottom]), pos_int(), aggr2_fun()}]).
+       {oneof([top, bottom]), pos_int(),
+        #{op => fcall,
+          args => #{name => aggr2_fun(), inputs => []}}}]).
 
 percentile() ->
     ?SUCHTHAT(N, real(), N > 0 andalso N =< 1).
@@ -103,19 +105,20 @@ arith(Q) ->
                 inputs => [Q, arith_const()]}}.
 
 aggr2_fun() ->
-    oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>]).
+    oneof([<<"avg">>, <<"sum">>, <<"min">>, <<"max">>, <<"variance">>,
+           <<"stddev">>, <<"median">>]).
 aggr2(Q) ->
     #{op => fcall,
       args => #{name => aggr2_fun(),
                 inputs => [Q, aggr_range()]}}.
 aggr1_fun() ->
-    oneof([<<"derivate">>]).
+    oneof([<<"derivate">>, <<"log10_scale">>, <<"sqrt_scale">>]).
 aggr1(Q) ->
     #{op => fcall,
       args => #{name => aggr1_fun(),
                 inputs => [Q]}}.
 comb_fun() ->
-    oneof([<<"sum">>]).
+    oneof([<<"sum">>, <<"avg">>, <<"quotient">>, <<"product">>]).
 comb(Q) ->
     #{op => fcall,
       args => #{name => comb_fun(),

@@ -60,7 +60,7 @@
         {error, binary()}.
 
 -type alias() :: term().
--type limit() :: undefined | {top | bottom, pos_integer(), atom()}.
+-type limit() :: undefined | {top | bottom, pos_integer(), dqe_fun()}.
 
 -type raw_query() :: string() | binary().
 
@@ -111,13 +111,17 @@ add_limit(Qs, Aliases, T, Limit) ->
 
 expand_limit(undefined) ->
     {ok, undefined};
-expand_limit({Direction, Count, Function}) ->
-    Types = [metric, time],
-    case dqe_fun:lookup(Function, Types) of
-        {ok,{{_, _, none}, metric, FunMod}} ->
-            {ok, {Direction, Count, FunMod}};
-        _ ->
-            {error, {not_found, Function, Types}}
+expand_limit({Direction, Count,
+              #{op := fcall, args :=
+                    A = #{inputs := Inputs}}}) ->
+    Inputs1 = [#{op => dummy, return => metric} |
+               Inputs ++ [#{op => dummy, return => time}]],
+    F1 = #{op => fcall, args => A#{inputs => Inputs1}},
+    case dql_resolver:resolve([F1]) of
+        {ok, [F]} ->
+            {ok, {Direction, Count, F}};
+        E ->
+            E
     end.
 %%--------------------------------------------------------------------
 %% @private

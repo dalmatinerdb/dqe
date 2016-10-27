@@ -35,13 +35,39 @@
 
 init() ->
     AggrFuns = [
-                dqe_max,
-                dqe_min,
-                dqe_avg_aggr,
                 dqe_sum_aggr,
-                dqe_derivate,
-                dqe_confidence
+                dqe_avg_aggr,
+                dqe_min_aggr,
+                dqe_max_aggr,
+                dqe_count_below_aggr,
+                dqe_count_above_aggr,
+                dqe_first_below_aggr,
+                dqe_first_above_aggr,
+                dqe_last_below_aggr,
+                dqe_last_above_aggr,
+
+                dqe_count_above_conf_aggr,
+                dqe_count_below_conf_aggr,
+                dqe_first_below_conf_aggr,
+                dqe_first_above_conf_aggr,
+                dqe_last_below_conf_aggr,
+                dqe_last_above_conf_aggr,
+
+
+                dqe_variance_aggr,
+                dqe_stddev_aggr,
+                dqe_median_aggr,
+                dqe_percentile_aggr
                ],
+    TransFuns = [
+                 dqe_derivate,
+                 dqe_abs_trans,
+                 dqe_sqrt_scale_trans,
+                 dqe_log10_scale_trans,
+                 dqe_min_trans,
+                 dqe_max_trans,
+                 dqe_confidence
+                ],
     ArithFuns = [
                  dqe_add_arith,
                  dqe_sub_arith,
@@ -65,7 +91,7 @@ init() ->
                 dqe_hist_percentile,
                 dqe_hist_stddev
                ],
-    AllFuns = AggrFuns ++ ArithFuns ++ CombFuns ++ HistFuns,
+    AllFuns = AggrFuns ++ TransFuns ++ ArithFuns ++ CombFuns ++ HistFuns,
     [dqe_fun:reg(F) || F <- AllFuns].
 
 %%--------------------------------------------------------------------

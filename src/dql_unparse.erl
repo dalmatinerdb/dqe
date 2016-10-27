@@ -6,6 +6,9 @@ unparse(L) when is_list(L) ->
     Unparsed = combine(Ps),
     Unparsed;
 
+unparse(#{op := dummy}) ->
+    <<>>;
+
 unparse(#{op := group_by,
           args := [From, Groupings, #{args := #{name := Function}}]}) ->
     FromB = unparse(From),
@@ -140,12 +143,16 @@ combine([], Acc) ->
     Acc;
 combine([E | R], <<>>) ->
     combine(R, E);
+combine([<<>> | R], Acc) ->
+    combine(R, Acc);
 combine([E | R], Acc) ->
     combine(R, <<Acc/binary, ", ", E/binary>>).
 
 unparse_limit(undefined) ->
     <<>>;
 unparse_limit({top, N, Fun}) ->
-    <<" TOP ", (integer_to_binary(N))/binary, " BY ", Fun/binary>>;
+    Fs = unparse(Fun),
+    <<" TOP ", (integer_to_binary(N))/binary, " BY ", Fs/binary>>;
 unparse_limit({bottom, N, Fun}) ->
-    <<" BOTTOM ", (integer_to_binary(N))/binary, " BY ", Fun/binary>>.
+    Fs = unparse(Fun),
+    <<" BOTTOM ", (integer_to_binary(N))/binary, " BY ", Fs/binary>>.
