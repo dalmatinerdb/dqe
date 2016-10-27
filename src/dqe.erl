@@ -45,6 +45,15 @@ init() ->
                 dqe_first_above_aggr,
                 dqe_last_below_aggr,
                 dqe_last_above_aggr,
+
+                dqe_count_above_conf_aggr,
+                dqe_count_below_conf_aggr,
+                dqe_first_below_conf_aggr,
+                dqe_first_above_conf_aggr,
+                dqe_last_below_conf_aggr,
+                dqe_last_above_conf_aggr,
+
+
                 dqe_variance_aggr,
                 dqe_stddev_aggr,
                 dqe_median_aggr,
@@ -52,7 +61,9 @@ init() ->
                ],
     TransFuns = [
                  dqe_derivate,
-                 dqe_sqrt,
+                 dqe_abs_trans,
+                 dqe_sqrt_scale_trans,
+                 dqe_log10_scale_trans,
                  dqe_min_trans,
                  dqe_max_trans,
                  dqe_confidence
