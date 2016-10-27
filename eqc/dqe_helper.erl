@@ -112,7 +112,7 @@ aggr2(Q) ->
       args => #{name => aggr2_fun(),
                 inputs => [Q, aggr_range()]}}.
 aggr1_fun() ->
-    oneof([<<"derivate">>, <<"sqrt">>]).
+    oneof([<<"derivate">>, <<"log10_scale">>, <<"sqrt_scale">>]).
 aggr1(Q) ->
     #{op => fcall,
       args => #{name => aggr1_fun(),
