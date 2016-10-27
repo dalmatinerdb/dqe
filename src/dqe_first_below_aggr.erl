@@ -29,8 +29,8 @@ describe(#state{const = Const, time = Time})->
     ["first_below(", float_to_list(Const), ", ", integer_to_list(Time), ",s)"].
 
 spec() ->
-    [{<<"first_below">>, [metric, integer], none, metric},
-     {<<"first_below">>, [metric, float], none, metric}].
+    [{<<"first_below">>, [metric, integer, time], none, metric},
+     {<<"first_below">>, [metric, float, time], none, metric}].
 
 run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:first_below(Data, Const, Count), S}.

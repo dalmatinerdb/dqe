@@ -29,8 +29,8 @@ describe(#state{const = Const, time = Time})->
     ["count_above(", float_to_list(Const), ", ", integer_to_list(Time), ",s)"].
 
 spec() ->
-    [{<<"count_above">>, [metric, integer], none, metric},
-     {<<"count_above">>, [metric, float], none, metric}].
+    [{<<"count_above">>, [metric, integer, time], none, metric},
+     {<<"count_above">>, [metric, float, time], none, metric}].
 
 run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:count_above(Data, Const, Count), S}.

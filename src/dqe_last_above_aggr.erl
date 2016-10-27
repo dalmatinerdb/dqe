@@ -29,8 +29,8 @@ describe(#state{const = Const, time = Time})->
     ["last_above(", float_to_list(Const), ", ", integer_to_list(Time), ",s)"].
 
 spec() ->
-    [{<<"last_above">>, [metric, integer], none, metric},
-     {<<"last_above">>, [metric, float], none, metric}].
+    [{<<"last_above">>, [metric, integer, time], none, metric},
+     {<<"last_above">>, [metric, float, time], none, metric}].
 
 run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:last_above(Data, Const, Count), S}.
