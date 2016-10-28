@@ -207,7 +207,6 @@ prepare(Query) ->
             {Total, Unique} = count_parts(Parts),
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
                            [Total, Unique]),
-            io:format("Parts: ~p~n", [Parts]),
             {ok, Parts1} = add_collect(Parts, []),
             dqe_lib:pdebug('prepare', "Naming applied.", []),
             {ok, {Total, Unique, Parts1}, Start, Limit};
@@ -268,8 +267,8 @@ count_parts(Parts) ->
 
 extract_gets({combine, _Fun, Parts}) ->
     [extract_gets(P) || P <- Parts];
-extract_gets({calc, _, #{op := events}}) ->
-    [];
+extract_gets({calc, _, O = #{op := events}}) ->
+    [O];
 extract_gets({calc, _, C}) ->
     extract_gets(C);
 extract_gets(#{op := get, args := [_, _,_, B, M]}) ->

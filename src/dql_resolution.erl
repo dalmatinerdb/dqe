@@ -45,7 +45,6 @@ get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
 get_resolution_fn(_, {error, resolution_conflict}) ->
     {error, resolution_conflict}.
 
-
 %%--------------------------------------------------------------------
 %% @doc Add start and end times to a statment.
 %% @end
@@ -53,8 +52,6 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 -spec get_times(dql:named(), dql:time(), #{}) ->
                        {ok, dql:named(), #{}} |
                        {error, resolution_conflict}.
-%%get_times(O = #{op := events}, T, BucketResolutions) ->
-%%    get_times_(O, T, BucketResolutions);
 get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
     case get_times_(C, T, BucketResolutions) of
         {ok, C1, BucketResolutions1} ->
@@ -62,13 +59,10 @@ get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
         E ->
             E
     end.
+
 -spec get_times_(dql:flat_stmt(), dql:time(), #{}) ->
                         {ok, dql:flat_stmt(), #{}} |
                         {error, resolution_conflict}.
-get_times_(S = #{op := timeshift, args := [Shift, C]}, T, BucketResolutions) ->
-    T1 = S#{args := [Shift, T]},
-    get_times_(C, T1, BucketResolutions);
-
 get_times_({calc, Chain,
             {combine,
              F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}

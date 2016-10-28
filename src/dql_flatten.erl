@@ -16,8 +16,6 @@ flatten(Qs) ->
 -spec flatten_(dql:dqe_fun() | dql:get_stmt()) ->
                       #{op => named, args => [binary() | dql:flat_stmt()]}.
 
-flatten_(E = #{op := events}) ->
-    E;
 flatten_(#{op := named, args := [N, Child]}) ->
     C = flatten_(Child, []),
     R = get_type(C),
