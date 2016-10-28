@@ -175,7 +175,7 @@ named() ->
 
 maybe_named(S) ->
     oneof([
-           qry_tree(S),
+           maybe_events(S),
            #{
               op   => named,
               args => [named(), qry_tree(S)],
@@ -191,6 +191,30 @@ maybe_shifted(S) ->
               args => [time_type(), qry_tree(S)]
             }
           ]).
+maybe_events(S) ->
+    frequency(
+      [{1, mayby_named_events()},
+       {10, qry_tree(S)}]).
+mayby_named_events() ->
+    oneof([
+           events(),
+           #{
+              op   => named,
+              args => [[bucket()], events()],
+              return => events
+            }
+]).
+
+events() ->
+    #{
+       op => events,
+       return => events,
+       args => #{
+         bucket => bucket(),
+         filter => event_filter()
+        }}.
+event_filter() ->
+    [].
 
 qry_tree(S) when S < 1->
     oneof([

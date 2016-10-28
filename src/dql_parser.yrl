@@ -62,10 +62,10 @@ events -> kw_events kw_from part_or_name :
                 args =>
                     #{bucket => '$3',
                       filter => []}}.
-events -> kw_events kw_from part_or_name kw_as part_or_name :
+events -> kw_events kw_from part_or_name kw_as part_or_name:
               #{op => named,
-                returns => events,
-                args => ['$5', #{op => events,
+                return => events,
+                args => [['$5'], #{op => events,
                                  return => events,
                                  args =>
                                      #{bucket => '$3',
@@ -77,10 +77,11 @@ events -> kw_events kw_from part_or_name kw_where event_logic :
                 args =>
                     #{bucket => '$3',
                       filter => flatten('$5')}}.
+
 events -> kw_events kw_from part_or_name kw_where event_logic kw_as part_or_name :
               #{op => named,
-                returns => events,
-                args => ['$5',
+                return => events,
+                args => [['$5'],
                          #{op => events,
                            return => events,
                            args =>
