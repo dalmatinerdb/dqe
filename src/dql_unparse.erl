@@ -27,6 +27,11 @@ unparse(#{op   := events,
           args := #{bucket := Bucket,
                     filter := []}}) ->
     <<"EVENTS FROM ", Bucket/binary>>;
+unparse(#{op   := events,
+          args := #{bucket := Bucket,
+                    filter := Filter}}) ->
+    FilterS = unparse_filter(Filter),
+    <<"EVENTS FROM ", Bucket/binary, " WHERE ", FilterS/binary>>;
 
 unparse(#{op   := combine,
           args := #{name      := Name,
@@ -142,16 +147,19 @@ unparse_where({'and', Clause1, Clause2}) ->
     <<P1/binary, " AND (", P2/binary, ")">>.
 
 combine(L) ->
-    combine(L, <<>>).
+    combine(L, <<", ">>).
 
-combine([], Acc) ->
+combine(L, C) ->
+    combine(L, C, <<>>).
+
+combine([], _C, Acc) ->
     Acc;
-combine([E | R], <<>>) ->
-    combine(R, E);
-combine([<<>> | R], Acc) ->
-    combine(R, Acc);
-combine([E | R], Acc) ->
-    combine(R, <<Acc/binary, ", ", E/binary>>).
+combine([E | R], C, <<>>) ->
+    combine(R, C, E);
+combine([<<>> | R], C, Acc) ->
+    combine(R, C, Acc);
+combine([E | R], C, Acc) ->
+    combine(R, C, <<Acc/binary, C/binary, E/binary>>).
 
 unparse_limit(undefined) ->
     <<>>;
@@ -161,3 +169,43 @@ unparse_limit({top, N, Fun}) ->
 unparse_limit({bottom, N, Fun}) ->
     Fs = unparse(Fun),
     <<" BOTTOM ", (integer_to_binary(N))/binary, " BY ", Fs/binary>>.
+
+unparse_filter([E]) ->
+    unparse_filter(E);
+
+unparse_filter(L) when is_list(L) ->
+    L1 = [unparse_filter(E) || E <- L],
+    S = combine(L1, <<" AND ">>),
+    <<"(", S/binary, ")">>;
+
+unparse_filter({'or', L, R}) ->
+    LS = unparse_filter(L),
+    RS = unparse_filter(R),
+    <<"(", LS/binary, " OR ", RS/binary, ")">>;
+
+unparse_filter({Op, Path, Val}) ->
+    OpS = atom_to_binary(Op, utf8),
+    ValS = unparse_val(Val),
+    PathS = unparse_path(Path, <<>>),
+    <<"(",
+      PathS/binary,
+      " ", OpS/binary, " ",
+      ValS/binary,
+      ")">>.
+
+unparse_val(V) when is_binary(V) ->
+    <<"'", V/binary, "'">>;
+unparse_val(V) when is_integer(V) ->
+    integer_to_binary(V);
+unparse_val(V) when is_float(V) ->
+float_to_binary(V).
+
+unparse_path([], Acc) ->
+    Acc;
+unparse_path([B | R], <<>>) when is_binary(B) ->
+    unparse_path(R, <<"'", B/binary, "'">>);
+unparse_path([B | R], Acc) when is_binary(B) ->
+    unparse_path(R, <<Acc/binary, ".'", B/binary, "'">>);
+unparse_path([I | R], Acc) when is_integer(I) ->
+    unparse_path(R, <<Acc/binary, "[", (integer_to_binary(I))/binary, "]">>).
+

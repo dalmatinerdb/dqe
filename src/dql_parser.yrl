@@ -4,11 +4,13 @@ funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause maybe_shifted
 math math1 math2 number number2 number3  maybe_scoped_dvar
-maybe_group_by grouping metric_or_all limit limit_direction events.
+maybe_group_by grouping metric_or_all limit limit_direction
+op op_re events event_condition event_logic event_path event_value.
 
 %% hist  calculatables.
 
-Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
+Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-' '[' ']'
+'==' '>=' '=<' '>' '<' '~='
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
@@ -68,6 +70,49 @@ events -> kw_events kw_from part_or_name kw_as part_or_name :
                                  args =>
                                      #{bucket => '$3',
                                        filter => []}}]}.
+
+events -> kw_events kw_from part_or_name kw_where event_logic :
+              #{op => events,
+                return => events,
+                args =>
+                    #{bucket => '$3',
+                      filter => flatten('$5')}}.
+events -> kw_events kw_from part_or_name kw_where event_logic kw_as part_or_name :
+              #{op => named,
+                returns => events,
+                args => ['$5',
+                         #{op => events,
+                           return => events,
+                           args =>
+                               #{bucket => '$3',
+                                 filter => flatten('$5')}}]}.
+
+event_logic -> event_condition              : '$1'.
+event_logic -> event_logic kw_and event_condition : {'and', '$1', '$3'}.
+event_logic -> event_logic kw_or event_condition  : {'or', '$1', '$3'}.
+
+
+op  -> '==' : '=='.
+op  -> '>=' : '>='.
+op  -> '=<' : '=<'.
+op  -> '>' : '>'.
+op  -> '<' : '<'.
+op_re -> '~=' : '~='.
+
+event_condition -> kw_not event_condition   : {'not', '$2'}.
+event_condition -> event_path op event_value      : {'$2', '$1', '$3'}.
+event_condition -> event_path op_ne event_value   : {'not', [{'==', '$1', '$3'}]}.
+event_condition -> event_path op_re part_or_name  : {'~=', '$1', unwrap('$3')}.
+event_condition -> '(' event_logic ')'      : '$2'.
+
+event_value -> integer : unwrap('$1').
+event_value -> float   : unwrap('$1').
+event_value -> part_or_name  : '$1'.
+
+event_path -> part_or_name : ['$1'].
+event_path -> event_path '.' part_or_name : '$1' ++ [unwrap('$3')].
+event_path -> event_path '[' integer ']': '$1' ++ [unwrap('$3')].
+
 
 as_part -> part_or_name          : '$1'.
 as_part -> maybe_scoped_dvar     : {dvar, '$1'}.
@@ -324,3 +369,12 @@ named(N, Q) ->
       args => [N, Q],
       return => undefined
     }.
+
+flatten({'and', A, B}) ->
+    lists:flatten([flatten(A), flatten(B)]);
+flatten({'or', A, B}) ->
+    [{'or', flatten(A), flatten(B)}];
+flatten({'not', A}) ->
+    [{'not', flatten(A)}];
+flatten(O) ->
+    lists:flatten([O]).

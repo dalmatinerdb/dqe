@@ -42,6 +42,7 @@ EVENTS  = [Ee][Vv][Ee][Nn][Tt][Ss]
 TOP     = [Tt][Oo][Pp]
 BOTTOM  = [Bb][Oo][Tt][Tt][Oo][Mm]
 OP_NE   = (!=)
+OP      = (~=|==|>=|=<|>|<)
 
 Rules.
 {SELECT}    :   {token, {kw_select,     TokenLine}}.
@@ -82,7 +83,7 @@ Rules.
 {DATE}       :   S = strip(TokenChars,   TokenLen),
                  {token, {date,          TokenLine, S}}.
 {S}          :   {token, {name,          TokenLine, b(TokenChars)}}.
-[(),.*/=:+-] :   {token, {a(TokenChars), TokenLine}}.
+({OP}|[(),.*/=:+-[\]]) :   {token, {a(TokenChars), TokenLine}}.
 {PVAR}       :   {token, {pvar,          i(strip_var(TokenChars))}}.
 {QVAR}       :   {token, {dvar,          b(strip_var(TokenChars, TokenLen))}}.
 {VAR}        :   {token, {dvar,          b(strip_var(TokenChars))}}.
