@@ -4,7 +4,7 @@ funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
 glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
 mfrom var metric where where_part as_part as_clause maybe_shifted
 math math1 math2 number number2 number3  maybe_scoped_dvar
-maybe_group_by grouping metric_or_all limit limit_direction.
+maybe_group_by grouping metric_or_all limit limit_direction events.
 
 %% hist  calculatables.
 
@@ -12,7 +12,8 @@ Terminals '(' ')' ',' '.' '*' '/' '=' ':' '+' '-'
 part  integer kw_bucket kw_select kw_last kw_as kw_from date
 kw_between kw_and kw_or kw_ago kw_now time float name
 kw_after kw_before kw_for kw_where kw_alias pvar dvar kw_shift
-kw_by kw_not op_ne kw_group kw_using kw_all kw_top kw_bottom.
+kw_by kw_not op_ne kw_group kw_using kw_all kw_top kw_bottom
+kw_events.
 
 %% caggr aggr derivate  float name
 %% kw_after kw_before kw_for histogram percentile avg hfun mm kw_where
@@ -51,6 +52,22 @@ funs -> fune ',' funs : ['$1'] ++ '$3'.
 %% with a name
 fune -> math kw_as as_clause : named('$3', '$1').
 fune -> math : '$1'.
+fune -> events  : '$1'.
+
+events -> kw_events kw_from part_or_name :
+              #{op => events,
+                return => events,
+                args =>
+                    #{bucket => '$3',
+                      filter => []}}.
+events -> kw_events kw_from part_or_name kw_as part_or_name :
+              #{op => named,
+                returns => events,
+                args => ['$5', #{op => events,
+                                 return => events,
+                                 args =>
+                                     #{bucket => '$3',
+                                       filter => []}}]}.
 
 as_part -> part_or_name          : '$1'.
 as_part -> maybe_scoped_dvar     : {dvar, '$1'}.

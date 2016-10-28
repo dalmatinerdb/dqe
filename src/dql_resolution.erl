@@ -18,10 +18,8 @@ resolve(Qs, T) ->
             {ok, lists:reverse(Qs1)}
     end.
 
-
 propagate(Qs)->
     [apply_times(Q) || Q <- Qs].
-
 
 start_time(T) ->
     {Start, _End} = compute_se(apply_times(T, 1000), 1000),
@@ -55,6 +53,8 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 -spec get_times(dql:named(), dql:time(), #{}) ->
                        {ok, dql:named(), #{}} |
                        {error, resolution_conflict}.
+%%get_times(O = #{op := events}, T, BucketResolutions) ->
+%%    get_times_(O, T, BucketResolutions);
 get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
     case get_times_(C, T, BucketResolutions) of
         {ok, C1, BucketResolutions1} ->
@@ -107,6 +107,9 @@ get_times_({calc, Chain,
             {error, E}
     end;
 
+get_times_({calc, Chain, E = #{op := events}}, T, BucketResolutions) ->
+    C1 = {calc, Chain, E#{times => T}},
+    {ok, C1, BucketResolutions};
 get_times_({calc, Chain, Get}, T, BucketResolutions) ->
     {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} =
         bucket_resolution(Get, BucketResolutions),
@@ -157,6 +160,7 @@ map_constants(E) ->
 %% @doc Look up resolution of a get statment.
 %% @end
 %%--------------------------------------------------------------------
+
 -spec bucket_resolution(dql:get_stmt(), #{}) ->
                                {ok, dql:get_stmt(), #{}}.
 bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
@@ -273,6 +277,13 @@ apply_times({calc, Chain, {combine, F = #{resolution := Rms}, Elements}}) ->
     Chain1 = time_walk_chain(Chain, Rms, []),
     Chain2 = lists:reverse(Chain1),
     {calc, Chain2, {combine, F, Elements1}};
+
+apply_times({calc, Chain, Q = #{op := events, times := T}}) ->
+    {StartMs, CountMs} = compute_se(apply_times(T, 1), 1),
+    Start = erlang:convert_time_unit(StartMs, milli_seconds, nano_seconds),
+    Count = erlang:convert_time_unit(CountMs, milli_seconds, nano_seconds),
+    End = Start + Count,
+    {calc, Chain, Q#{times => [Start, End]}};
 
 apply_times({calc, Chain, Get}) ->
     {ok, Rms} = get_resolution(Get),

@@ -37,15 +37,18 @@ done(_O, State) ->
 
 apply_limit(Data, undefined) ->
     Data;
-apply_limit(Data, {_, N, _})
-  when length(Data) =< N ->
-    Data;
 apply_limit(Data, {Direction, N, Mod}) ->
-    Data1 = [calculate_limit_value(E, Mod) ||
-                E <- Data],
-    %% We don't need the ranking after we sort,
-    Data2 = [E || {_, E} <- lists:sort(Data1)],
-    take(Data2, Direction, N).
+    case [E || E = #{type := metrics} <- Data] of
+        _Metrics when length(_Metrics) =< N ->
+            Data;
+        Metrics ->
+            Events = [E || E = #{type := events} <- Data],
+            Metrics1 = [calculate_limit_value(E, Mod) ||
+                           E <- Metrics],
+            %% We don't need the ranking after we sort,
+            Metrics2 = [E || {_, E} <- lists:sort(Metrics1)],
+            take(Metrics2 ++ Events, Direction, N)
+    end.
 
 %% When we use top we want the 'biggest' elements that are
 %% last in the list so we reverse the list and treat it as
@@ -55,7 +58,7 @@ take(Data, top, N) ->
 take(Data, bottom, N) ->
     lists:sublist(Data, N).
 
-calculate_limit_value({N, Data, R},
+calculate_limit_value(#{data := Data} = M,
                       #{args := #{constants := Cs,
                                   %%inputs => [#{op => dummy,return => metric}],
                                   mod := Mod},
@@ -67,7 +70,7 @@ calculate_limit_value({N, Data, R},
     {_, S1} = Mod:resolution(1, S0),
     {V, _} = Mod:run([Data], S1),
     [V0] = mmath_bin:to_list(mmath_bin:derealize(V)),
-    {V0, {N, Data, R}}.
+    {V0, M}.
 
 
 to_v(#{op := float, args := [V]}) ->

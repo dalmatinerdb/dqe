@@ -207,6 +207,7 @@ prepare(Query) ->
             {Total, Unique} = count_parts(Parts),
             dqe_lib:pdebug('prepare', "Counting parts ~p total and ~p unique.",
                            [Total, Unique]),
+            io:format("Parts: ~p~n", [Parts]),
             {ok, Parts1} = add_collect(Parts, []),
             dqe_lib:pdebug('prepare', "Naming applied.", []),
             {ok, {Total, Unique, Parts1}, Start, Limit};
@@ -227,6 +228,10 @@ prepare(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec add_collect([dql:query_stmt()], [dflow:step()]) -> {ok, [dflow:step()]}.
+add_collect([{named, Name, {calc, [], Q = #{return := events}}} | R], Acc) ->
+    {ok, _Resolution, Translated} = translate(Q),
+    Q1 = {dqe_collect_events, [Name, Translated]},
+    add_collect(R, [Q1 | Acc]);
 add_collect([{named, Name, Q} | R], Acc) ->
     {ok, Resolution, Translated} = translate(Q),
     Q1 = {dqe_collect, [Name, Resolution, Translated]},
@@ -260,11 +265,13 @@ count_parts(Parts) ->
 %%--------------------------------------------------------------------
 -spec extract_gets(dql:flat_stmt()) ->
                           {binary(), binary()}.
+
 extract_gets({combine, _Fun, Parts}) ->
     [extract_gets(P) || P <- Parts];
+extract_gets({calc, _, #{op := events}}) ->
+    [];
 extract_gets({calc, _, C}) ->
     extract_gets(C);
-
 extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
     {B, M}.
 
@@ -277,6 +284,10 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
 %%--------------------------------------------------------------------
 -spec translate(DQLTerm :: dql:query_part() | dql:dqe_fun()) ->
                        {ok, pos_integer(), dflow:step()}.
+translate(#{op := events, times := [Start, End],
+            args := #{bucket := Bucket, filter := Filter}}) ->
+    {ok, 1, {dqe_events, [Bucket, Start, End, Filter]}};
+
 translate({calc, [], G}) ->
     translate(G);
 

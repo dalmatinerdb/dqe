@@ -23,6 +23,11 @@ unparse(#{op   := fcall,
     Qs = unparse(Args),
     <<Name/binary, "(", Qs/binary, ")">>;
 
+unparse(#{op   := events,
+          args := #{bucket := Bucket,
+                    filter := []}}) ->
+    <<"EVENTS FROM ", Bucket/binary>>;
+
 unparse(#{op   := combine,
           args := #{name      := Name,
                     inputs    := Args}}) ->

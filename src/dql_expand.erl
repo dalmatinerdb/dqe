@@ -20,6 +20,8 @@ expand_grouped({calc, Chain, #{op := group_by, args := [L, G, Fun]}},
     R1 = combine_groupings(R, G, Fun),
     [{calc, Chain, E} || E <- R1];
 
+expand_grouped(Q = #{op := events}, _) ->
+    [Q];
 expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
     Gs = [N || {dvar, N} <- L],
     [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];

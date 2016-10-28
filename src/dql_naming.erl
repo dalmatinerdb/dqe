@@ -22,6 +22,9 @@ update(Qs) ->
 %%% Internal functions
 %%%===================================================================
 
+update_name(#{op := events} = E) ->
+    {named, dql_unparse:unparse(E), E};
+
 update_name({named, L, C}) when is_list(L)->
     {Path, Gs} = extract_path_and_groupings(C),
     Name = [update_name_element(N, Path, Gs) || N <- L],

@@ -16,6 +16,8 @@ flatten(Qs) ->
 -spec flatten_(dql:dqe_fun() | dql:get_stmt()) ->
                       #{op => named, args => [binary() | dql:flat_stmt()]}.
 
+flatten_(E = #{op := events}) ->
+    E;
 flatten_(#{op := named, args := [N, Child]}) ->
     C = flatten_(Child, []),
     R = get_type(C),
@@ -38,32 +40,35 @@ flatten_(Child = #{return := R}) ->
 
 -spec flatten_(dql:statement(), [dql:dqe_fun()]) ->
                      dql:flat_stmt().
-
 flatten_(#{op := timeshift, args := [Time, Child]}, Chain) ->
     C = flatten_(Child, Chain),
     #{op => timeshift, args => [Time, C],
       return => get_type(C)};
 
 %% flatten_(#{op := timeshift, args := [_Time, Child]}, []) ->
-flatten_(GroupBy = #{op   := group_by}, Chain) ->
+flatten_(GroupBy = #{op := group_by}, Chain) ->
     {calc, Chain, GroupBy};
 
 flatten_(F = #{op   := fcall,
-              args := Args = #{inputs := [Child]}}, Chain) ->
+               args := Args = #{inputs := [Child]}}, Chain) ->
     Args1 = maps:remove(inputs, Args),
     Args2 = maps:remove(orig_args, Args1),
     flatten_(Child, [F#{args => Args2} | Chain]);
 
 flatten_(F = #{op   := combine,
-              args := Args = #{inputs := Children}}, Chain) ->
+               args := Args = #{inputs := Children}}, Chain) ->
     Args1 = maps:remove(orig_args, Args),
     Args2 = maps:remove(inputs, Args1),
     Children1 = [flatten_(C, []) || C <- Children],
     Comb = {combine, F#{args => Args2}, Children1},
     {calc, Chain, Comb};
 
+
+flatten_(O = #{op := events}, Chain) ->
+    {calc, Chain, O};
+
 flatten_(Get = #{op := get},
-        Chain) ->
+         Chain) ->
     {calc, Chain, Get};
 
 flatten_(Get = #{op := lookup},
