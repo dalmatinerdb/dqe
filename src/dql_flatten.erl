@@ -18,7 +18,6 @@ flatten(Qs) ->
 
 flatten_(#{op := named, args := [undefined, M, Child]}) ->
     N = dql_unparse:unparse(Child),
-    io:format("N: ~p~n", [N]),
     C = flatten_(Child, []),
     R = get_type(C),
     #{
