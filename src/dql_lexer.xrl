@@ -3,46 +3,47 @@
 
 Definitions.
 
-Sign    = [\-+]?
-Digit   = [0-9]
-Float   = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
+Sign     = [\-+]?
+Digit    = [0-9]
+Float    = {Digit}+\.{Digit}+([eE][-+]?[0-9]+)?
 
-PART    = '(\\.|[^\'\\])+'
-DATE    = "(\\.|[^\"\\])+"
-S       = [A-Za-z][A-Za-z0-9_@-]*
-PVAR    = [$][0-9]+
-QVAR    = [$]'(\\.|[^\'\\])+'
+PART     = '(\\.|[^\'\\])+'
+DATE     = "(\\.|[^\"\\])+"
+S        = [A-Za-z][A-Za-z0-9_@-]*
+PVAR     = [$][0-9]+
+QVAR     = [$]'(\\.|[^\'\\])+'
 %'% damn you syntax highlighter
-VAR     = [$][A-Za-z0-9_@-]+
-WS      = ([\000-\s]|%.*)
-TIME    = (ms|s|m|h|d|w)
-SELECT  = [Ss][Ee][Ll][Ee][Cc][Tt]
-BUCKET  = [Bb][Uu][Cc][Kk][Ee][Tt]
-LAST    = [Ll][Aa][Ss][Tt]
-AS      = [Aa][Ss]
-FROM    = [Ff][Rr][Oo][Mm]
-ALIAS   = [Aa][Ll][Ii][Aa][Ss]
-LIKE    = [Ll][Ii][Kk][Ee]
-BETWEEN = [Bb][Ee][Tt][Ww][Ee][Ee][Nn]
-NOW     = [Nn][Oo][Ww]
-AGO     = [Aa][Gg][Oo]
-AND     = [Aa][Nn][Dd]
-OR      = [Oo][Rr]
-AFTER   = [Aa][Ff][Tt][Ee][Rr]
-BEFORE  = [Bb][Ee][Ff][Oo][Rr][Ee]
-FOR     = [Ff][Oo][Rr]
-WHERE   = [Ww][Hh][Ee][Rr][Ee]
-SHIFT   = [Ss][Hh][Ii][Ff][Tt]
-GROUP   = [Gg][Rr][Oo][Uu][Pp]
-BY      = [Bb][Yy]
-USING   = [Uu][Ss][Ii][Nn][Gn]
-NOT     = [Nn][Oo][Tt]
-ALL     = [Aa][Ll][Ll]
-EVENTS  = [Ee][Vv][Ee][Nn][Tt][Ss]
-TOP     = [Tt][Oo][Pp]
-BOTTOM  = [Bb][Oo][Tt][Tt][Oo][Mm]
-OP_NE   = (!=)
-OP      = (~=|==|>=|=<|>|<)
+VAR      = [$][A-Za-z0-9_@-]+
+WS       = ([\000-\s]|%.*)
+TIME     = (ms|s|m|h|d|w)
+SELECT   = [Ss][Ee][Ll][Ee][Cc][Tt]
+BUCKET   = [Bb][Uu][Cc][Kk][Ee][Tt]
+LAST     = [Ll][Aa][Ss][Tt]
+AS       = [Aa][Ss]
+FROM     = [Ff][Rr][Oo][Mm]
+ALIAS    = [Aa][Ll][Ii][Aa][Ss]
+LIKE     = [Ll][Ii][Kk][Ee]
+BETWEEN  = [Bb][Ee][Tt][Ww][Ee][Ee][Nn]
+NOW      = [Nn][Oo][Ww]
+AGO      = [Aa][Gg][Oo]
+AND      = [Aa][Nn][Dd]
+OR       = [Oo][Rr]
+AFTER    = [Aa][Ff][Tt][Ee][Rr]
+BEFORE   = [Bb][Ee][Ff][Oo][Rr][Ee]
+FOR      = [Ff][Oo][Rr]
+WHERE    = [Ww][Hh][Ee][Rr][Ee]
+SHIFT    = [Ss][Hh][Ii][Ff][Tt]
+GROUP    = [Gg][Rr][Oo][Uu][Pp]
+BY       = [Bb][Yy]
+USING    = [Uu][Ss][Ii][Nn][Gn]
+NOT      = [Nn][Oo][Tt]
+ALL      = [Aa][Ll][Ll]
+EVENTS   = [Ee][Vv][Ee][Nn][Tt][Ss]
+TOP      = [Tt][Oo][Pp]
+BOTTOM   = [Bb][Oo][Tt][Tt][Oo][Mm]
+METADATA = [Mm][Ee][Tt][Aa][Dd][Aa][Tt][Aa]
+OP_NE    = (!=)
+OP       = (~=|==|>=|=<|>|<)
 
 Rules.
 {SELECT}    :   {token, {kw_select,     TokenLine}}.
@@ -52,6 +53,7 @@ Rules.
 {FROM}      :   {token, {kw_from,       TokenLine}}.
 {ALIAS}     :   {token, {kw_alias,      TokenLine}}.
 {BETWEEN}   :   {token, {kw_between,    TokenLine}}.
+{METADATA}  :   {token, {kw_metadata,   TokenLine}}.
 {LIKE}      :   {token, {kw_like,       TokenLine}}.
 {NOW}       :   {token, {kw_now,        TokenLine}}.
 {AGO}       :   {token, {kw_ago,        TokenLine}}.
@@ -83,7 +85,7 @@ Rules.
 {DATE}       :   S = strip(TokenChars,   TokenLen),
                  {token, {date,          TokenLine, S}}.
 {S}          :   {token, {name,          TokenLine, b(TokenChars)}}.
-({OP}|[(),.*/=:+-[\]]) :   {token, {a(TokenChars), TokenLine}}.
+({OP}|[(),.*/=:[\]{}+-]) :   {token, {a(TokenChars), TokenLine}}.
 {PVAR}       :   {token, {pvar,          i(strip_var(TokenChars))}}.
 {QVAR}       :   {token, {dvar,          b(strip_var(TokenChars, TokenLen))}}.
 {VAR}        :   {token, {dvar,          b(strip_var(TokenChars))}}.

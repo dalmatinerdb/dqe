@@ -7,13 +7,14 @@
 -record(state, {
           acc  = <<>>:: binary(),
           name :: binary(),
-          resolution :: pos_integer()
+          resolution :: pos_integer(),
+          mdata :: [{binary(), binary()}]
          }).
 
-init([Name, SubQ]) ->
-    init([Name, -1, SubQ]);
-init([Name, Resolution, SubQ]) when not is_list(SubQ) ->
-    {ok, #state{name = Name, resolution = Resolution}, SubQ}.
+init([Name, MData, SubQ]) ->
+    init([Name, MData, -1, SubQ]);
+init([Name, MData, Resolution, SubQ]) when not is_list(SubQ) ->
+    {ok, #state{name = Name, resolution = Resolution, mdata = MData}, SubQ}.
 
 describe(_) ->
     "collect".
@@ -31,10 +32,12 @@ emit(_C, Data, State = #state{acc = Acc})
 done(_Child, State = #state{resolution = undefined}) ->
     {done, State};
 
-done(_Child, State = #state{resolution = Resolution, name = Name, acc = Acc}) ->
+done(_Child, State = #state{resolution = Resolution, name = Name, acc = Acc,
+                            mdata = MData}) ->
     {done, #{
        name => Name,
        data => mmath_bin:derealize(Acc),
        resolution => Resolution,
+       metadata => maps:from_list(MData),
        type => metrics},
      State#state{acc = <<>>}}.

@@ -39,14 +39,16 @@ unparse(#{op   := combine,
     Qs = unparse(Args),
     <<Name/binary, "(", Qs/binary, ")">>;
 
-unparse(#{op := named, args := [N, Q]}) when is_binary(N) ->
+unparse(#{op := named, args := [N, M, Q]}) when is_binary(N) ->
     Qs = unparse(Q),
-    <<Qs/binary, " AS '", N/binary, "'">>;
+    Ms = unparse_metadata(M),
+    <<Qs/binary, " AS '", N/binary, "'", Ms/binary>>;
 
-unparse(#{op := named, args := [L, Q]}) when is_list(L) ->
+unparse(#{op := named, args := [L, M, Q]}) when is_list(L) ->
     N = unparse_named(L),
     Qs = unparse(Q),
-    <<Qs/binary, " AS ", N/binary>>;
+    Ms = unparse_metadata(M),
+    <<Qs/binary, " AS ", N/binary, Ms/binary>>;
 
 unparse(#{op := time, args := [N, U]}) ->
     Us = atom_to_binary(U, utf8),
@@ -209,3 +211,21 @@ unparse_path([B | R], Acc) when is_binary(B) ->
 unparse_path([I | R], Acc) when is_integer(I) ->
     unparse_path(R, <<Acc/binary, "[", (integer_to_binary(I))/binary, "]">>).
 
+
+unparse_metadata([]) ->
+    <<>>;
+unparse_metadata(L) ->
+    Es = [unparse_metadata(K, V) || {K, V} <- L],
+    Eb = combine(Es),
+    <<" METADATA {", Eb/binary, "}">>.
+
+unparse_metadata(K, V) ->
+    Vs = unparse_kdata_value(V),
+    <<"'", K/binary, "': ", Vs/binary>>.
+
+unparse_kdata_value(I) when is_integer(I) ->
+    integer_to_binary(I);
+unparse_kdata_value(F) when is_float(F) ->
+    float_to_binary(F);
+unparse_kdata_value(O) ->
+    unparse_name(O).

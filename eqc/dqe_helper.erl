@@ -178,7 +178,7 @@ maybe_named(S) ->
            maybe_events(S),
            #{
               op   => named,
-              args => [named(), qry_tree(S)],
+              args => [named(), metadata(), qry_tree(S)],
               return => undefined
             }
           ]).
@@ -195,15 +195,30 @@ maybe_events(S) ->
     frequency(
       [{1, mayby_named_events()},
        {10, qry_tree(S)}]).
+metadata() ->
+    list(metadata_element()).
+
+metadata_key() ->
+    non_empty_binary().
+metadata_val() ->
+    oneof([non_empty_binary(),
+           int(),
+           real(),
+           %% dvar(),
+           pvar()]).
+metadata_element() ->
+    {metadata_key(),
+     metadata_val()}.
+
 mayby_named_events() ->
     oneof([
            events(),
            #{
               op   => named,
-              args => [[bucket()], events()],
-              return => events
+              args => [[bucket()], metadata(), events()],
+              return => undefined
             }
-]).
+          ]).
 
 events() ->
     #{

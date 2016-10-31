@@ -17,12 +17,12 @@ resolve(Qs) ->
 %% @doc Resolves functions based on their parameter types
 %% @end
 %%--------------------------------------------------------------------
-resolve_functions(#{op := named, args := [N, Q], return := undefined}) ->
+resolve_functions(#{op := named, args := [N, M, Q], return := undefined}) ->
     case resolve_functions(Q) of
         {ok, R = #{return := T}} ->
             {ok, #{
                op => named,
-               args => [N, R],
+               args => [N, M, R],
                signature => [string, T],
                return => T
               }

@@ -6,11 +6,12 @@
 
 -record(state, {
           acc  = [] :: [maps:map()],
+          mdata :: [{binary(), binary()}],
           name :: binary()
          }).
 
-init([Name, SubQ]) when not is_list(SubQ) ->
-    {ok, #state{name = Name}, SubQ}.
+init([Name, MData, SubQ]) when not is_list(SubQ) ->
+    {ok, #state{mdata = MData, name = Name}, SubQ}.
 
 describe(_) ->
     "collect_events".
@@ -25,9 +26,10 @@ emit(_C, Data, State = #state{acc = Acc})
   when is_list(Data) ->
     {ok, State#state{acc = [Data | Acc]}}.
 
-done(_Child, State = #state{name = Name, acc = Acc}) ->
+done(_Child, State = #state{name = Name, acc = Acc, mdata = MData}) ->
     {done, #{name => Name,
              data => lists:flatten(Acc),
+             metadata => maps:from_list(MData),
              resolution => 1.0e-6,
              type => events},
      State#state{acc = []}}.

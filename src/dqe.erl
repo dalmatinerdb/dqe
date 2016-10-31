@@ -227,13 +227,13 @@ prepare(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec add_collect([dql:query_stmt()], [dflow:step()]) -> {ok, [dflow:step()]}.
-add_collect([{named, Name, {calc, [], Q = #{return := events}}} | R], Acc) ->
+add_collect([{named, Name, Mdata, {calc, [], Q = #{return := events}}} | R], Acc) ->
     {ok, _Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect_events, [Name, Translated]},
+    Q1 = {dqe_collect_events, [Name, Mdata, Translated]},
     add_collect(R, [Q1 | Acc]);
-add_collect([{named, Name, Q} | R], Acc) ->
+add_collect([{named, Name, Mdata, Q} | R], Acc) ->
     {ok, Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect, [Name, Resolution, Translated]},
+    Q1 = {dqe_collect, [Name, Mdata, Resolution, Translated]},
     add_collect(R, [Q1 | Acc]);
 
 add_collect([], Acc) ->
@@ -248,7 +248,7 @@ add_collect([], Acc) ->
 -spec count_parts([dql:query_stmt()]) ->
                          {non_neg_integer(), non_neg_integer()}.
 count_parts(Parts) ->
-    Gets = [extract_gets(P) || {named, _, P} <- Parts],
+    Gets = [extract_gets(P) || {named, _, _, P} <- Parts],
     Gets1 = lists:flatten(Gets),
     Total = length(Gets1),
     Unique = length(lists:usort(Gets1)),

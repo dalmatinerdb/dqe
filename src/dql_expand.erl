@@ -22,12 +22,15 @@ expand_grouped({calc, Chain, #{op := group_by, args := [L, G, Fun]}},
 
 expand_grouped(Q = #{op := events}, _) ->
     [Q];
-expand_grouped(Q = #{op := named, args := [L, S]}, Groupings) when is_list(L) ->
+expand_grouped(Q = #{op := named, args := [L, M, S]}, Groupings)
+  when is_list(L) ->
+    MGs = [N || {_, {dvar, N}} <- M],
     Gs = [N || {dvar, N} <- L],
-    [Q#{args => [L, S1]} || S1 <- expand_grouped(S, Gs ++  Groupings)];
+    [Q#{args => [L, M, S1]} || S1 <- expand_grouped(S, Gs ++ MGs ++  Groupings)];
 
-expand_grouped(Q = #{op := named, args := [N, S]}, Groupings) ->
-    [Q#{args => [N, S1]} || S1 <- expand_grouped(S, Groupings)];
+expand_grouped(Q = #{op := named, args := [N, M, S]}, Groupings) ->
+    MGs = [D || {_, {dvar, D}} <- M],
+    [Q#{args => [N, M, S1]} || S1 <- expand_grouped(S, MGs ++ Groupings)];
 
 expand_grouped(Q = #{op := timeshift, args := [T, S]}, Groupings) ->
     [Q#{args => [T, S1]} || S1 <- expand_grouped(S, Groupings)];

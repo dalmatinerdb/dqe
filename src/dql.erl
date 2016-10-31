@@ -1,9 +1,7 @@
 -module(dql).
 
--export([prepare/1]).
--ifdef(TEST).
--export([parse/1]).
--endif.
+-export([prepare/1, parse/1]).
+-ignore_xref([parse/1]).
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
               statement/0, named/0, time/0, raw_query/0, limit/0]).
@@ -52,9 +50,10 @@
 -type flat_stmt() ::
         {calc, [dqe_fun()], flat_terminal() | get_stmt()}.
 
--type named() :: #{op => named, args => [binary() | flat_stmt()]}.
+-type named() :: #{op => named, args => [binary() | {binary(), term()} |
+                                         flat_stmt()]}.
 
--type query_stmt() :: {named, binary(), flat_stmt()}.
+-type query_stmt() :: {named, binary(), [{binary(), binary()}], flat_stmt()}.
 
 -type parser_error() ::
         {error, binary()}.
@@ -182,7 +181,7 @@ expand(Qs, T) ->
 %%--------------------------------------------------------------------
 -spec get_resolution([flat_stmt()], time()) ->
                             {error, term()} |
-                            {'ok',[{named, binary(), flat_stmt()}],
+                            {'ok',[query_stmt()],
                              pos_integer()}.
 get_resolution(Qs, T) ->
     case dql_resolution:resolve(Qs, T) of

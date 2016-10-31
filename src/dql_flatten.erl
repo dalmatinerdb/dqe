@@ -16,12 +16,23 @@ flatten(Qs) ->
 -spec flatten_(dql:dqe_fun() | dql:get_stmt()) ->
                       #{op => named, args => [binary() | dql:flat_stmt()]}.
 
-flatten_(#{op := named, args := [N, Child]}) ->
+flatten_(#{op := named, args := [undefined, M, Child]}) ->
+    N = dql_unparse:unparse(Child),
+    io:format("N: ~p~n", [N]),
     C = flatten_(Child, []),
     R = get_type(C),
     #{
        op => named,
-       args => [N, C],
+       args => [N, M, C],
+       signature => [string, R],
+       return => R
+     };
+flatten_(#{op := named, args := [N, M, Child]}) ->
+    C = flatten_(Child, []),
+    R = get_type(C),
+    #{
+       op => named,
+       args => [N, M, C],
        signature => [string, R],
        return => R
      };
@@ -31,7 +42,7 @@ flatten_(Child = #{return := R}) ->
     C = flatten_(Child, []),
     #{
        op => named,
-       args => [N, C],
+       args => [N, [], C],
        signature => [string, R],
        return => R
      }.

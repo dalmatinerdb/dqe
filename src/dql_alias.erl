@@ -80,12 +80,12 @@ resolve_statement(O = #{op  := fcall,
             Input2 = lists:reverse(Input1),
             {O#{args => Args#{inputs => Input2}}, A1}
     end;
-resolve_statement(O = #{op := named, args := [N, Q]}, Aliases) ->
+resolve_statement(O = #{op := named, args := [N, M, Q]}, Aliases) ->
     case resolve_statement(Q, Aliases) of
         {error, _} = E ->
             E;
         {Q1, A1} ->
-            {O#{args => [N, Q1]}, A1}
+            {O#{args => [N, M, Q1]}, A1}
     end;
 resolve_statement(#{op := var, args := [V]}, Aliases) ->
     case gb_trees:lookup(V, Aliases) of

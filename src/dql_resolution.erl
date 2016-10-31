@@ -52,10 +52,10 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 -spec get_times(dql:named(), dql:time(), #{}) ->
                        {ok, dql:named(), #{}} |
                        {error, resolution_conflict}.
-get_times(O = #{op := named, args := [N, C]}, T, #{} = BucketResolutions) ->
+get_times(O = #{op := named, args := [N, M, C]}, T, #{} = BucketResolutions) ->
     case get_times_(C, T, BucketResolutions) of
         {ok, C1, BucketResolutions1} ->
-            {ok, O#{args => [N, C1]}, BucketResolutions1};
+            {ok, O#{args => [N, M, C1]}, BucketResolutions1};
         E ->
             E
     end.
@@ -262,9 +262,9 @@ apply_times(T, R) ->
 %% @end
 %%--------------------------------------------------------------------
 
-apply_times(#{op := named, args := [N, C]}) ->
+apply_times(#{op := named, args := [N, M, C]}) ->
     C1 = apply_times(C),
-    {named, N, C1};
+    {named, N, M, C1};
 
 apply_times({calc, Chain, {combine, F = #{resolution := Rms}, Elements}}) ->
     Elements1 = [apply_times(E) || E <- Elements],

@@ -23,19 +23,22 @@ update(Qs) ->
 %%%===================================================================
 
 
-update_name({named, L, C = {calc,_,#{op := events}}})->
-    {named, L, C};
-update_name({named, L, C}) when is_list(L)->
+update_name({named, L, M, C = {calc,_,#{op := events}}}) when is_list(L) ->
+    {named, dql_unparse:unparse_metric(L), M, C};
+
+update_name({named, N, M, C = {calc,_,#{op := events}}}) when is_binary(N) ->
+    {named, N, M, C};
+
+update_name({named, L, M, C}) when is_list(L)->
     {Path, Gs} = extract_path_and_groupings(C),
     Name = [update_name_element(N, Path, Gs) || N <- L],
-    {named, dql_unparse:unparse_metric(Name), C};
-
-update_name({named, _N, _C} = Q) when is_binary(_N) ->
-    Q;
-
-update_name({named, _N, _C} = Q) ->
-    io:format("Unkown named: ~p~n", [Q]),
-    Q.
+    M1 = [{K, update_name_element(V, Path, Gs)} || {K, V} <- M],
+    %% TODO: add naming for metadata!
+    {named, dql_unparse:unparse_metric(Name), M1, C};
+update_name({named, N, M, C}) when is_binary(N) ->
+    {Path, Gs} = extract_path_and_groupings(C),
+    M1 = [{K, update_name_element(V, Path, Gs)} || {K, V} <- M],
+    {named, N, M1, C}.
 
 update_name_element({dvar, N}, _Path, Gs) ->
     {_, Name} = lists:keyfind(N, 1, Gs),
