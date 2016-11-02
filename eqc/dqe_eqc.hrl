@@ -1,13 +1,3 @@
--module(dqe_helper).
-
--include_lib("eqc/include/eqc.hrl").
-
--export([glob/0, where_clause/1, lookup/0, tag/0, bm/0, glob_bm/0,
-         glob_metric/0, metric/0, bucket/0, qry_tree/1, maybe_named/1,
-         maybe_shifted/1, named_element/0, dvar/0, pvar/0, sget_f/0, get_f/0,
-         comb/1, comb/2, aggr1/1, aggr2/1, arith/1, aggr_tree/1, hist_tree/1,
-         comb_tree/1, percentile/0, select_stmt/0, aliases/0, rel_time/0]).
-
 str() ->
     list(choose($a, $z)).
 

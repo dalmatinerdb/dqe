@@ -1,8 +1,7 @@
 -module(qry_parser_eqc).
 
 -include_lib("eqc/include/eqc.hrl").
-
--import(dqe_helper, [select_stmt/0]).
+-include("dqe_eqc.hrl").
 
 -compile(export_all).
 
