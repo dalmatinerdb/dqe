@@ -80,6 +80,7 @@ init() ->
                 dqe_diff_comb,
                 dqe_product_comb,
                 dqe_quotient_comb,
+                dqe_min_comb,
                 dqe_max_comb
                ],
     HistFuns = [
