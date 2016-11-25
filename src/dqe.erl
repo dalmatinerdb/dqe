@@ -107,6 +107,10 @@ error_string({error, {not_found, {var, Name}}}) ->
 error_string({error, {not_found, {glob, Glob}}}) ->
     ["No series matches ", dqe_lib:glob_to_string(Glob), "!"];
 
+error_string({error, {not_found, Name, Args}}) when is_list(Args) ->
+    ArgLst = [atom_to_list(A) || A <- Args],
+    ["Not recognized function ", Name, $(, string:join(ArgLst, ", "), ")."];
+
 error_string({error, no_results}) ->
     "No results were returned for the query.";
 
