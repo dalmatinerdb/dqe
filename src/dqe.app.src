@@ -1,6 +1,6 @@
 {application,dqe,
              [{description,"DalmatinerDB query engine"},
-              {vsn,"0.4.9"},
+              {vsn,"0.4.10"},
               {registered,[]},
               {mod,{dqe_app,[]}},
               {applications,[kernel,ddb_client,qdate,dflow,mmath,dproto,
