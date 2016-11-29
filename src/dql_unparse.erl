@@ -180,10 +180,18 @@ unparse_filter(L) when is_list(L) ->
     S = combine(L1, <<" AND ">>),
     <<"(", S/binary, ")">>;
 
+
 unparse_filter({'or', L, R}) ->
     LS = unparse_filter(L),
     RS = unparse_filter(R),
     <<"(", LS/binary, " OR ", RS/binary, ")">>;
+
+unparse_filter({'not', [{'==', Path, Val}]}) ->
+    unparse_filter({'!=', Path, Val});
+
+unparse_filter({'not', Ops}) ->
+    OpsS = unparse_filter(Ops),
+    <<"not (", OpsS/binary, ")">>;
 
 unparse_filter({Op, Path, Val}) ->
     OpS = atom_to_binary(Op, utf8),

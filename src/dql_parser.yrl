@@ -101,7 +101,7 @@ op_re -> '~=' : '~='.
 event_condition -> kw_not event_condition   : {'not', '$2'}.
 event_condition -> event_path op event_value      : {'$2', '$1', '$3'}.
 event_condition -> event_path op_ne event_value   : {'not', [{'==', '$1', '$3'}]}.
-event_condition -> event_path op_re part_or_name  : {'~=', '$1', unwrap('$3')}.
+event_condition -> event_path op_re part_or_name  : {'~=', '$1', '$3'}.
 event_condition -> '(' event_logic ')'      : '$2'.
 
 event_value -> integer : unwrap('$1').
