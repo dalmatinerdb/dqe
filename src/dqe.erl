@@ -161,9 +161,13 @@ run(Query, Timeout) ->
             Sender = {dflow_send, [self(), WaitRef, Funnel]},
             %% We only optimize the flow when there are at least 10% duplicate
             %% gets, or in other words if less then 90% of the requests are
-            %% unique
+            %% unique.
+            %% Queries across a lot of series are blowing up memo on
+            %% optimization, so we run otimization only on resonably small
+            %% queries.
             FlowOpts = case Unique / Total of
-                           UniquePercentage when UniquePercentage > 0.9 ->
+                           UniquePercentage when UniquePercentage > 0.9;
+                                                 Total > 1000 ->
                                [terminate_when_done];
                            _ ->
                                [optimize, terminate_when_done]
