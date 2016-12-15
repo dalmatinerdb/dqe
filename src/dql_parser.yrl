@@ -109,7 +109,7 @@ event_value -> float   : unwrap('$1').
 event_value -> part_or_name  : '$1'.
 
 event_path -> part_or_name : ['$1'].
-event_path -> event_path '.' part_or_name : '$1' ++ [unwrap('$3')].
+event_path -> event_path '.' part_or_name : '$1' ++ ['$3'].
 event_path -> event_path '[' integer ']': '$1' ++ [unwrap('$3')].
 
 
