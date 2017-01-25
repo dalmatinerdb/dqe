@@ -13,8 +13,8 @@
 flatten(Qs) ->
     [flatten_(Q) || Q <- Qs].
 
--spec flatten_(dql:dqe_fun() | dql:get_stmt()) ->
-                      #{op => named, args => [binary() | dql:flat_stmt()]}.
+-spec flatten_(dql:dqe_fun_writh_return() | dql:statement()) ->
+                      dql:named().
 
 flatten_(#{op := named, args := [undefined, M, Child]}) ->
     N = dql_unparse:unparse(Child),
@@ -46,7 +46,7 @@ flatten_(Child = #{return := R}) ->
        return => R
      }.
 
--spec flatten_(dql:statement(), [dql:dqe_fun()]) ->
+-spec flatten_(dql:dqe_fun_writh_return() | dql:statement(), [dql:dqe_fun()]) ->
                      dql:flat_stmt().
 flatten_(#{op := timeshift, args := [Time, Child]}, Chain) ->
     C = flatten_(Child, Chain),

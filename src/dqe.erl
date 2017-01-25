@@ -12,9 +12,24 @@
 
 -export([prepare/1, run/1, run/2, error_string/1, init/0]).
 
--type query_reply() :: [{Name :: binary(),
-                         Data :: binary(),
-                         Resolution :: pos_integer()}].
+-type metric_reply() :: #{
+                    name       => binary(),
+                    type       => metrics,
+                    resolution => pos_integer(),
+                    metadata   => maps:map(),
+                    data       => binary()
+                   }.
+
+-type event_reply() :: #{
+                    name       => binary(),
+                    type       => events,
+                    resolution => pos_integer(),
+                    data       => binary()
+                   }.
+
+-type reply_element() :: metric_reply() | event_reply().
+
+-type query_reply() :: [reply_element()].
 
 -type query_error() :: {'error', 'no_results' |
                         'significant_figures' |
@@ -290,7 +305,8 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
 %%
 %% @end
 %%--------------------------------------------------------------------
--spec translate(DQLTerm :: dql:query_part() | dql:dqe_fun()) ->
+-spec translate(DQLTerm :: dql:query_part() | dql:dqe_fun()
+                         | dql:event_getter()) ->
                        {ok, pos_integer(), dflow:step()}.
 translate(#{op := events, times := [Start, End],
             args := #{bucket := Bucket, filter := Filter}}) ->

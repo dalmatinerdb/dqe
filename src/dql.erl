@@ -4,7 +4,8 @@
 -ignore_xref([parse/1]).
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
-              statement/0, named/0, time/0, raw_query/0, limit/0]).
+              statement/0, named/0, time/0, raw_query/0, limit/0,
+              event_getter/0, dqe_fun_writh_return/0, return/0]).
 
 -type time_unit() :: ms | s | m | h | d | w.
 
@@ -23,11 +24,30 @@
 
 -type sig_element() :: string | number | metric.
 
+-type event_filter() :: term().
+-type return()       :: events | metric | time.
+-type event_getter() :: #{
+                    return => events,
+                    op     => events,
+                    times  => list(),
+                    args   => #{
+                      bucket => binary(),
+                      filter => event_filter()
+                     }
+                   }.
 -type dqe_fun() ::
         #{
            op => fcall,
            signature => [sig_element()],
            args => #{}
+         }.
+
+-type dqe_fun_writh_return() ::
+        #{
+           return    => return(),
+           op        => fcall,
+           signature => [sig_element()],
+           args      => #{}
          }.
 
 -type get_stmt() ::
@@ -50,8 +70,11 @@
 -type flat_stmt() ::
         {calc, [dqe_fun()], flat_terminal() | get_stmt()}.
 
--type named() :: #{op => named, args => [binary() | {binary(), term()} |
-                                         flat_stmt()]}.
+-type named() :: #{op        => named,
+                   return    => dql:return(),
+                   signature => [sig_element()],
+                   args      => [binary() | {binary(), term()} |
+                                 flat_stmt()]}.
 
 -type query_stmt() :: {named, binary(), [{binary(), binary()}], flat_stmt()}.
 
