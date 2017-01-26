@@ -39,6 +39,10 @@
                         {not_found, binary(), [atom()]} |
                         {'not_found',{binary(), binary()}}}.
 
+-type opts() :: debug |
+                {token, binary()} |
+                {timeout, pos_integer() | infinity}.
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -148,7 +152,7 @@ error_string({error, B}) when is_binary(B) ->
                  {'ok', pos_integer(), query_reply()} |
                  query_error().
 run(Query) ->
-    run(Query, infinity).
+    run(Query, [{timeout, infinity}]).
 
 %%--------------------------------------------------------------------
 %% @doc Runs a query and returns the results or exits with a timeout.
@@ -159,11 +163,17 @@ run(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec run(Query :: dql:raw_query(), Timeout :: pos_integer() | infinity) ->
+-spec run(Query :: dql:raw_query(), Timeout :: [opts()]) ->
                  {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
-
-run(Query, Timeout) ->
+run(Query, Opts) ->
+    Timeout = proplists:get_value(timeout, Opts, infinity),
+    case proplists:get_value(token, Opts) of
+        Token when is_binary(Token)  ->
+            put(debug_id, filename:basename(Token));
+        _ ->
+            ok
+    end,
     put(start, erlang:system_time()),
     case prepare(Query) of
         {ok, {0, 0, _Parts}, _Start, _Limit} ->
@@ -183,25 +193,29 @@ run(Query, Timeout) ->
             FlowOpts = case Unique / Total of
                            UniquePercentage when UniquePercentage > 0.9;
                                                  Total > 1000 ->
-                               [terminate_when_done];
+                               [];
                            _ ->
-                               [optimize, terminate_when_done]
+                               [optimize]
                        end,
             {ok, _Ref, Flow} = dflow:build(Sender, FlowOpts),
             dqe_lib:pdebug('query', "flow generated.", []),
             dflow:start(Flow, run),
             case dflow_send:recv(WaitRef, Timeout) of
                 {ok, [{error, no_results}]} ->
+                    maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
                     {error, no_results};
                 {ok, [Result]} ->
+                    maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query complete.", []),
                     %% Result1 = [Element || {points, Element} <- Result],
                     {ok, Start, Result};
                 {ok, []} ->
+                    maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
                     {error, no_results};
                 E ->
+                    maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query error: ~p", [E]),
                     E
             end;
@@ -209,6 +223,19 @@ run(Query, Timeout) ->
             E
     end.
 
+maybe_debug(Flow, Opts) ->
+    case proplists:get_bool(debug, Opts) of
+        false ->
+            dflow:terminate(Flow);
+        true ->
+            File = dqe_lib:debugid(),
+            Dir = application:get_env(dqe, debug_folder, "/var/tmp"),
+            Path = filename:join([Dir, <<File/binary, ".dot">>]),
+            dflow_graph:write_dot(Path, Flow),
+            io:format("dot file written: ~s", [Path]),
+            dqe_lib:pdebug('debug', "dot file written: ~s", [Path]),
+            dflow:terminate(Flow)
+    end.
 %%--------------------------------------------------------------------
 %% @doc Prepares query exeuction, this can be used of the query is
 %% to be executed asynchronously instead of using {@link run/2}.

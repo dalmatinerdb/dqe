@@ -9,3 +9,7 @@
 {mapping, "dqe.max_read", "dqe.max_read",
  [{default, 1209600},
   {datatype, integer}]}.
+
+{mapping, "dqe.debug_folder", "dqe.debug_folder",
+  [{default, "/var/tmp"},
+   {datatype, directory}]}.
