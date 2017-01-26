@@ -1,5 +1,5 @@
 {"1.1.0",
-[{<<"cf">>,{pkg,<<"cf">>,<<"0.2.1">>},2},
+[{<<"cf">>,{pkg,<<"cf">>,<<"0.2.2">>},1},
  {<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.2.0">>},1},
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.20">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.7">>},0},
@@ -10,7 +10,7 @@
  {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.3.6">>},0},
  {<<"epgsql">>,{pkg,<<"epgsql">>,<<"3.3.0">>},2},
  {<<"erlang_localtime">>,{pkg,<<"erlang_localtime">>,<<"1.0.0">>},1},
- {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"0.20.0">>},1},
+ {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"1.0.0">>},0},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"hdr_histogram">>,{pkg,<<"hdr_histogram">>,<<"0.2.0">>},0},
  {<<"jsxd">>,{pkg,<<"jsxd">>,<<"0.2.3">>},1},
@@ -22,7 +22,7 @@
  {<<"snappy">>,{pkg,<<"snappy">>,<<"1.1.1">>},1}]}.
 [
 {pkg_hash,[
- {<<"cf">>, <<"69D0B1349FD4D7D4DC55B7F407D29D7A840BF9A1EF5AF529F1EBE0CE153FC2AB">>},
+ {<<"cf">>, <<"7F2913FFF90ABCABD0F489896CFEB0B0674F6C8DF6C10B17A83175448029896C">>},
  {<<"ddb_client">>, <<"CAFEFB981C6697303285C23EA6C160EB9CD37D516AD4BF2D33126E2BDB0DC571">>},
  {<<"ddb_connection">>, <<"600C18E0910CE0A6744941A74AEEB569D5BABF15D5282A442C24B5635DA71CAD">>},
  {<<"dflow">>, <<"7B4B17789C99C7D9FECB4CFFA37841DB4C025F7823B1E7DDCE88A248DF53F27B">>},
@@ -33,7 +33,7 @@
  {<<"dqe_idx_pg">>, <<"5B93531BC946E53BED16947ADB01753F54DF6E057AD0B18AD13E603540C9A779">>},
  {<<"epgsql">>, <<"974A578340E52012CBAB820CE756E7ED1DF1BAF0110C59A6753D8337A2CF9454">>},
  {<<"erlang_localtime">>, <<"497DFD4D13523D3E0EECDCB8D6D59857CF642A17A6BDC6133FF906FDAF2AEF21">>},
- {<<"erlware_commons">>, <<"721F902031D0313E192FD4038C326F89415855CD1A5CF804AB04B314D0944146">>},
+ {<<"erlware_commons">>, <<"087467DE5833C0BB5B3CCDD387F9E9C1FB816A75B7A709629BF24B5ED3246C51">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
  {<<"hdr_histogram">>, <<"95A7EC3C8FA354E4CFBFC8F4168EE8F07BD3965CA22B9C45B2A2C9D13B03DCEC">>},
  {<<"jsxd">>, <<"B2DBBB24A91536C50F75372FB8E28CD16691707AB53BE9449C59A8A611A581A2">>},
