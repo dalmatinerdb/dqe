@@ -1,5 +1,5 @@
 {"1.1.0",
-[{<<"cf">>,{pkg,<<"cf">>,<<"0.2.2">>},1},
+[{<<"cf">>,{pkg,<<"cf">>,<<"0.2.2">>},2},
  {<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.2.0">>},1},
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.1.20">>},0},
  {<<"dflow">>,{pkg,<<"dflow">>,<<"0.1.7">>},0},
@@ -9,8 +9,7 @@
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.2.4">>},0},
  {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.3.6">>},0},
  {<<"epgsql">>,{pkg,<<"epgsql">>,<<"3.3.0">>},2},
- {<<"erlang_localtime">>,{pkg,<<"erlang_localtime">>,<<"1.0.0">>},1},
- {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"1.0.0">>},0},
+ {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"1.0.0">>},1},
  {<<"goldrush">>,{pkg,<<"goldrush">>,<<"0.1.9">>},1},
  {<<"hdr_histogram">>,{pkg,<<"hdr_histogram">>,<<"0.2.0">>},0},
  {<<"jsxd">>,{pkg,<<"jsxd">>,<<"0.2.3">>},1},
@@ -18,7 +17,11 @@
  {<<"mmath">>,{pkg,<<"mmath">>,<<"0.2.14">>},0},
  {<<"pgapp">>,{pkg,<<"pgapp">>,<<"0.0.2">>},1},
  {<<"poolboy">>,{pkg,<<"poolboy">>,<<"1.5.1">>},1},
- {<<"qdate">>,{pkg,<<"qdate">>,<<"0.4.3">>},0},
+ {<<"qdate">>,
+  {git,"https://github.com/dalmatinerdb/qdate.git",
+       {ref,"fcfb8105014b8bef19f50dd89647c0e58dae0903"}},
+  0},
+ {<<"qdate_localtime">>,{pkg,<<"qdate_localtime">>,<<"1.1.0">>},1},
  {<<"snappy">>,{pkg,<<"snappy">>,<<"1.1.1">>},1}]}.
 [
 {pkg_hash,[
@@ -32,7 +35,6 @@
  {<<"dqe_idx_ddb">>, <<"2316B160D3EF3AAF2C60213A870D7B6A13C4035BF578DDC52301DA879099420C">>},
  {<<"dqe_idx_pg">>, <<"5B93531BC946E53BED16947ADB01753F54DF6E057AD0B18AD13E603540C9A779">>},
  {<<"epgsql">>, <<"974A578340E52012CBAB820CE756E7ED1DF1BAF0110C59A6753D8337A2CF9454">>},
- {<<"erlang_localtime">>, <<"497DFD4D13523D3E0EECDCB8D6D59857CF642A17A6BDC6133FF906FDAF2AEF21">>},
  {<<"erlware_commons">>, <<"087467DE5833C0BB5B3CCDD387F9E9C1FB816A75B7A709629BF24B5ED3246C51">>},
  {<<"goldrush">>, <<"F06E5D5F1277DA5C413E84D5A2924174182FB108DABB39D5EC548B27424CD106">>},
  {<<"hdr_histogram">>, <<"95A7EC3C8FA354E4CFBFC8F4168EE8F07BD3965CA22B9C45B2A2C9D13B03DCEC">>},
@@ -41,6 +43,6 @@
  {<<"mmath">>, <<"7A9A2032A1BB34B02F4DEC4F2A8C1C87F115A5C4C950D4E782BF444353438E47">>},
  {<<"pgapp">>, <<"3E104BB777C8455D8B26D1538B67ABE0188EE97B1DF973FD936C2204CB316196">>},
  {<<"poolboy">>, <<"6B46163901CFD0A1B43D692657ED9D7E599853B3B21B95AE5AE0A777CF9B6CA8">>},
- {<<"qdate">>, <<"6037343CAA1EF8BA8AF13AFD5A2A89CE7695C1E8A12D87702D66624290E3BE76">>},
+ {<<"qdate_localtime">>, <<"5F6C3ACF10ECC5A7E2EFA3DCD2C863102B962188DBD9E086EC01D29FE029DA29">>},
  {<<"snappy">>, <<"D63449A58F1358046B7ADAEC166AE8929C2B19881E76C4E13284304FE887C39A">>}]}
 ].
