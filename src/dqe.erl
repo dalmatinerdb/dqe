@@ -208,8 +208,6 @@ run(Query, Opts) ->
                     dqe_lib:pdebug('query', "Query has no results.", []),
                     {error, no_results};
                 {ok, [Result]} ->
-                    maybe_debug(Flow, Opts),
-                    dqe_lib:pdebug('query', "Query complete.", []),
                     %% Result1 = [Element || {points, Element} <- Result],
                     Result1 = case proplists:get_bool(return_graph, Opts) of
                                   true ->
@@ -221,6 +219,8 @@ run(Query, Opts) ->
                                   _ ->
                                       Result
                               end,
+                    maybe_debug(Flow, Opts),
+                    dqe_lib:pdebug('query', "Query complete.", []),
                     {ok, Start, Result1};
                 {ok, []} ->
                     maybe_debug(Flow, Opts),
