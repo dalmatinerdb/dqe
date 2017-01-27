@@ -40,6 +40,8 @@
                         {'not_found',{binary(), binary()}}}.
 
 -type opts() :: debug |
+                log_slow_queries |
+                {slow_ms, pos_integer()} |
                 {token, binary()} |
                 {timeout, pos_integer() | infinity}.
 
@@ -209,7 +211,17 @@ run(Query, Opts) ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query complete.", []),
                     %% Result1 = [Element || {points, Element} <- Result],
-                    {ok, Start, Result};
+                    Result1 = case proplists:get_bool(return_graph, Opts) of
+                                  true ->
+                                      Desc = dflow:describe(Flow),
+                                      Graph= dflow_graph:desc_to_graphviz(Desc),
+                                      GraphBin = list_to_binary(Graph),
+                                      [#{type => graph,
+                                         value => GraphBin} | Result];
+                                  _ ->
+                                      Result
+                              end,
+                    {ok, Start, Result1};
                 {ok, []} ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
@@ -223,17 +235,44 @@ run(Query, Opts) ->
             E
     end.
 
+%% The debug file is the debug ID prefixed with time
+debug_file() ->
+    T = integer_to_binary(erlang:system_time(seconds)),
+    ID = dqe_lib:debugid(),
+    <<T/binary, "-", ID/binary>>.
+
+do_debug(Opts) ->
+    case {proplists:get_bool(debug, Opts),
+          proplists:get_bool(log_slow_queries, Opts),
+          proplists:get_value(slow_ms, Opts, 5000)} of
+        %% If debug is set true we always debug
+        {true, _, _} ->
+            true;
+        %% If we don't log slow queries we don't bother about how
+        %% long the query took.
+        {_, false,_} ->
+            false;
+        %% If we log slow queries we check if the total query time is larger
+        %% then the slow_ms limit
+        {_, true, Slow} ->
+            D =  erlang:system_time(nano_seconds) - dqe_lib:pstart(),
+            Time = erlang:convert_time_unit(D, nano_seconds, milli_seconds),
+            Time > Slow
+    end.
+
 maybe_debug(Flow, Opts) ->
-    case proplists:get_bool(debug, Opts) of
+    case do_debug(Opts) of
         false ->
             dflow:terminate(Flow);
         true ->
-            File = dqe_lib:debugid(),
+            File = debug_file(),
             Dir = application:get_env(dqe, debug_folder, "/var/tmp"),
-            Path = filename:join([Dir, <<File/binary, ".dot">>]),
-            dflow_graph:write_dot(Path, Flow),
-            io:format("dot file written: ~s", [Path]),
-            dqe_lib:pdebug('debug', "dot file written: ~s", [Path]),
+            DotFile = filename:join([Dir, <<File/binary, ".dot">>]),
+            dflow_graph:write_dot(DotFile, Flow),
+            LogFile = filename:join([Dir, <<File/binary, ".log">>]),
+            Log = dqe_lib:get_log(),
+            file:write_file(LogFile, [["## DOT file: ", DotFile, "\n"] | Log]),
+            lager:info("debug output written to: ~s", [LogFile]),
             dflow:terminate(Flow)
     end.
 %%--------------------------------------------------------------------

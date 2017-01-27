@@ -1,12 +1,16 @@
 -module(dqe_lib).
 -include_lib("dproto/include/dproto.hrl").
 
--export([glob_to_string/1, pdebug/3, debugid/0]).
+-export([glob_to_string/1, pstart/0, pdebug/3, debugid/0, get_log/0]).
 
 pdebug(S, M, E) ->
-    D =  erlang:system_time() - pstart(),
-    MS = round(D / 1000 / 1000),
-    lager:debug("<~s> [dqe:~s|~p|~pms] " ++ M, [debugid(), S, self(), MS | E]).
+    D =  erlang:system_time(nano_seconds) - pstart(),
+    MS = erlang:convert_time_unit(D, nano_seconds, milli_seconds),
+    Log = io_lib:format("[~s|~pms] " ++ M ++ "~n", [S, MS | E]),
+    add_log(Log),
+    ID = debugid(),
+    LogStr = "<~s> [dqe:~s|~pms] " ++ M,
+    lager:debug(LogStr, [ID, S, MS | E]).
 
 pstart() ->
     case get(start) of
@@ -26,6 +30,22 @@ debugid() ->
             ID = base64:encode(crypto:strong_rand_bytes(6)),
             put(debug_id, ID),
             ID
+    end.
+
+add_log(Log) ->
+    case get(debug_log) of
+        List when is_list(List) ->
+            put(debug_log, [Log | List]);
+        _ ->
+            put(debug_log, [Log])
+    end.
+
+get_log() ->
+    case get(debug_log) of
+        List when is_list(List) ->
+            lists:reverse(List);
+        _ ->
+            []
     end.
 
 glob_to_string(G) ->
