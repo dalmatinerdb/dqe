@@ -22,7 +22,7 @@ init([Start, Count, _Resolution, Bucket, Key, Chunk]) ->
                 chunk = Chunk}, []}.
 
 describe(#state{bucket = Bucket, key = Key}) ->
-    [Bucket, "/", Key].
+    [Bucket, "/", dproto:metric_to_string(Key, <<".">>)].
 
 start(run, State = #state{count = 0}) ->
     {done, State};
