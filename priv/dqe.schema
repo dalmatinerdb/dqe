@@ -10,6 +10,12 @@
  [{default, 1209600},
   {datatype, integer}]}.
 
-{mapping, "dqe.debug_folder", "dqe.debug_folder",
-  [{default, "/var/tmp"},
-   {datatype, directory}]}.
+%% Directory for query logs to be written to
+{mapping, "dqe.debug.folder", "dqe.debug_folder",
+ [{default, "/var/tmp"},
+  {datatype, directory}]}.
+
+%% Default time for a query to be considered slow
+{mapping, "dqe.debug.max_time", "dqe.debug_slow",
+ [{default, "5s"},
+  {datatype, {duration, ms}}]}.

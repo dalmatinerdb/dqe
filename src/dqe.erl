@@ -242,9 +242,10 @@ debug_file() ->
     <<T/binary, "-", ID/binary>>.
 
 do_debug(Opts) ->
+    SlowDflt = application:get_env(dqe, debug_slow, 5000),
     case {proplists:get_bool(debug, Opts),
           proplists:get_bool(log_slow_queries, Opts),
-          proplists:get_value(slow_ms, Opts, 5000)} of
+          proplists:get_value(slow_ms, Opts, SlowDflt)} of
         %% If debug is set true we always debug
         {true, _, _} ->
             true;
