@@ -10,7 +10,8 @@
 -type time_unit() :: ms | s | m | h | d | w.
 
 -type time() :: #{ op => time,
-                   args => [pos_integer() | time_unit()]} | pos_integer().
+                   args => [pos_integer() | time_unit()]} |
+                #{ op => timeshift } | pos_integer().
 
 -type relative_time() :: time() |
                          now |

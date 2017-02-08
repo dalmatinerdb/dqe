@@ -101,6 +101,12 @@ get_times_({calc, Chain,
             {error, E}
     end;
 
+get_times_(TS = #{op := timeshift,
+                  args := [Shift, C]}, T, BucketResolutions) ->
+    T1 = TS#{args => [Shift, T]},
+    {ok, C1, BucketResolutions1} = get_times_(C, T1, BucketResolutions),
+    {ok, C1, BucketResolutions1};
+
 get_times_({calc, Chain, E = #{op := events}}, T, BucketResolutions) ->
     C1 = {calc, Chain, E#{times => T}},
     {ok, C1, BucketResolutions};

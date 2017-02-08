@@ -54,6 +54,7 @@ extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
 extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
   when is_binary(Path) ->
     {dproto:metric_to_list(Path), extract_groupings(G)};
+
 extract_path_and_groupings({calc, _, G}) ->
     extract_path_and_groupings(G);
 
