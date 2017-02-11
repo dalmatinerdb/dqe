@@ -7,9 +7,9 @@
          help/0]).
 
 -record(state, {
-          time :: pos_integer(),
+          time  :: pos_integer(),
           value :: float(),
-          count :: pos_integer()
+          count :: undefined | pos_integer()
          }).
 
 init([Value, Time]) when is_integer(Value) ->
@@ -24,11 +24,12 @@ resolution(Resolution, State = #state{time = Time}) ->
     Res = dqe_time:apply_times(Time, Resolution),
     {Res, State#state{count = Res}}.
 
-describe(#state{time = Time}) ->
-    ["percentile(", integer_to_list(Time), "ms)"].
+describe(#state{value = Const, time = Time}) ->
+    ["percentile(", float_to_list(Const), ", ", integer_to_list(Time), "ms)"].
 
 spec() ->
-    {<<"percentile">>, [metric, float, time], none, metric}.
+    [{<<"percentile">>, [metric, integer, time], none, metric},
+     {<<"percentile">>, [metric, float, time], none, metric}].
 
 run([Data], S = #state{value = V, count = Count}) ->
     {mmath_aggr:percentile(Data, V, Count), S}.
