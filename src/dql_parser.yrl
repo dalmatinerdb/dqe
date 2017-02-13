@@ -354,25 +354,25 @@ Erlang code.
 unwrap({_,_,V}) -> V;
 unwrap({_,V}) -> V.
 
-time(T, U) ->
+time(Time, Unit) ->
     #{
       op => time,
-      args => [T, U],
+      args => [Time, Unit],
       signature => [integer, time_unit],
       return => time
      }.
 
-named({N, M}, Q) ->
+named({Name, Metadata}, Query) ->
     #{
-      op => named,
-      args => [N, M, Q],
-      return => undefined
+       op => named,
+       args => [Name, Metadata, Query],
+       return => undefined
     }.
 
-flatten({'and', A, B}) ->
-    lists:flatten([flatten(A), flatten(B)]);
-flatten({'or', A, B}) ->
-    [{'or', flatten(A), flatten(B)}];
+flatten({'and', Left, Right}) ->
+    lists:flatten([flatten(Left), flatten(Right)]);
+flatten({'or', Left, Right}) ->
+    [{'or', flatten(Left), flatten(Right)}];
 flatten({'not', A}) ->
     [{'not', flatten(A)}];
 flatten(O) ->
