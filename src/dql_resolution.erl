@@ -113,7 +113,7 @@ get_times_({calc, Chain, E = #{op := events}}, T, BucketResolutions) ->
 get_times_({calc, Chain, Get}, T, BucketResolutions) ->
     {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} =
         bucket_resolution(Get, BucketResolutions),
-    T1 = apply_times(T, 1000),
+    T1 = apply_times(T, Rms),
     {Start, Count} = compute_se(T1, Rms),
     Calc1 = {calc, Chain, Get1#{resolution => Rms,
                                 args => [Start, Count | A]}},
