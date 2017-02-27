@@ -58,6 +58,7 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 %%--------------------------------------------------------------------
 -spec get_times(dql:named(), dql:time(), #{}) ->
                        {ok, dql:named(), #{}} |
+                        {error, no_results} |
                        {error, resolution_conflict}.
 get_times(O = #{op := named, args := [N, M, C]}, T, #{} = BucketResolutions) ->
     case get_times_(C, T, BucketResolutions) of
