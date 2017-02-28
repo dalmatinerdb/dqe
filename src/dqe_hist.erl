@@ -8,7 +8,7 @@
 
 -record(state, {
           time :: pos_integer(),
-          count :: pos_integer(),
+          count :: pos_integer() | undefined,
           htv :: pos_integer(),
           sf :: pos_integer(),
           acc = <<>> :: binary()

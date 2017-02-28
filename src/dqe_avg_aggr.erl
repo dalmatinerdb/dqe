@@ -8,7 +8,7 @@
 
 -record(state, {
           time :: pos_integer(),
-          count :: pos_integer()
+          count :: pos_integer() | undefined
          }).
 
 init([Time]) when is_integer(Time) ->

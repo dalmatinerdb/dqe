@@ -7,7 +7,7 @@
 -record(state, {
           acc  = <<>>:: binary(),
           name :: binary(),
-          resolution :: pos_integer(),
+          resolution :: pos_integer() | undefined,
           mdata :: [{binary(), binary()}]
          }).
 

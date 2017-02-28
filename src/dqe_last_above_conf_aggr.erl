@@ -7,7 +7,7 @@
 
 -record(state, {
           time :: pos_integer(),
-          last :: pos_integer(),
+          last :: pos_integer() | undefined,
           const :: number()
          }).
 
