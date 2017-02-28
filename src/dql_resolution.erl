@@ -34,14 +34,19 @@ start_time(T) ->
                         {[dql:named()], dql:time(), #{}} |
                         {error, resolution_conflict}) ->
                                {[dql:named()], dql:time(), #{}} |
-                               {error,resolution_conflict}.
+                               {error, no_results} |
+                               {error, resolution_conflict}.
 get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
     case get_times(Q, T, RAcc) of
         {ok, Q1, RAcc1} ->
             {[Q1 | QAcc], T, RAcc1};
+        {error, no_results} ->
+            {error, no_results};
         {error, resolution_conflict} ->
             {error, resolution_conflict}
     end;
+get_resolution_fn(_, {error, no_results}) ->
+    {error, no_results};
 get_resolution_fn(_, {error, resolution_conflict}) ->
     {error, resolution_conflict}.
 
@@ -51,6 +56,7 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 %%--------------------------------------------------------------------
 -spec get_times(dql:named(), dql:time(), #{}) ->
                        {ok, dql:named(), #{}} |
+                        {error, no_results} |
                        {error, resolution_conflict}.
 get_times(O = #{op := named, args := [N, M, C]}, T, #{} = BucketResolutions) ->
     case get_times_(C, T, BucketResolutions) of
@@ -62,7 +68,14 @@ get_times(O = #{op := named, args := [N, M, C]}, T, #{} = BucketResolutions) ->
 
 -spec get_times_(dql:flat_stmt(), dql:time(), #{}) ->
                         {ok, dql:flat_stmt(), #{}} |
+                        {error, no_results} |
                         {error, resolution_conflict}.
+
+get_times_({calc, _Chain, {combine, F = #{}, [] = _Elements}}, _T,
+            #{} = _BucketResolutions) ->
+    dqe_lib:pdebug(prepare, "No input for combiner Fn: ~p", [F]),
+    {error, no_results};
+
 get_times_({calc, Chain,
             {combine,
              F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
@@ -94,7 +107,6 @@ get_times_({calc, Chain,
                     Calc1 = {calc, Chain, Comb1},
                     {ok, apply_times(Calc1), BR};
                 _Error ->
-                    io:format("Elements: ~p~n", [Elements]),
                     {error, resolution_conflict}
             end;
         {error, E} ->
