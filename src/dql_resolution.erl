@@ -8,9 +8,7 @@
 %%%-------------------------------------------------------------------
 -module(dql_resolution).
 
-% -export([resolve/2, propagate/1, start_time/1]).
-
--compile([export_all]).
+-export([resolve/2, propagate/1, start_time/1]).
 
 resolve(Qs, T) ->
     case lists:foldl(fun get_resolution_fn/2, {[], T, #{}}, Qs) of
