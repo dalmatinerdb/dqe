@@ -41,8 +41,12 @@ update_name({named, N, M, C}) when is_binary(N) ->
     {named, N, M1, C}.
 
 update_name_element({dvar, N}, _Path, Gs) ->
-    {_, Name} = lists:keyfind(N, 1, Gs),
-    Name;
+    case lists:keyfind(N, 1, Gs) of
+        {_, undefined} ->
+            <<>>;
+        {_, Name} ->
+            Name
+    end;
 update_name_element({pvar, N}, Path, _Gs) ->
     lists:nth(N, Path);
 update_name_element(N, _, _) ->
