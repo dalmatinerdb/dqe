@@ -41,6 +41,7 @@
 
 -type opts() :: debug |
                 log_slow_queries |
+                {trace_id, undefined | integer()} |
                 {slow_ms, pos_integer()} |
                 {token, binary()} |
                 {timeout, pos_integer() | infinity}.
@@ -169,19 +170,30 @@ run(Query) ->
                  {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
 run(Query, Opts) ->
+
+    TraceID = proplists:get_value(trace_id, Opts, undefined),
+    dqe_span:start(query, TraceID),
+    dqe_span:tag(query, Query),
+    FlowOpts0 = case proplists:get_value(token, Opts) of
+                    Token when is_binary(Token)  ->
+                        dqe_span:tag(debug_id, Token),
+                        put(debug_id, filename:basename(Token)),
+                        [{trace_id, TraceID}];
+                    _ ->
+                        [terminate_when_done, {trace_id, TraceID}]
+                end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
-    case proplists:get_value(token, Opts) of
-        Token when is_binary(Token)  ->
-            put(debug_id, filename:basename(Token));
-        _ ->
-            ok
-    end,
     put(start, erlang:system_time()),
     case prepare(Query) of
         {ok, {0, 0, _Parts}, _Start, _Limit} ->
             dqe_lib:pdebug('query', "prepare found no metrics.", []),
+            dqe_span:tag(result, "no metrics"),
+            dqe_span:stop(),
             {error, no_results};
         {ok, {Total, Unique, Parts}, Start, Limit} ->
+            dqe_span:tag(parts, Total),
+            dqe_span:tag(unique, Unique),
+            dqe_span:log("preperation done"),
             dqe_lib:pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
             Funnel = {dqe_funnel, [Limit, Parts]},
@@ -195,17 +207,22 @@ run(Query, Opts) ->
             FlowOpts = case Unique / Total of
                            UniquePercentage when UniquePercentage > 0.9;
                                                  Total > 1000 ->
-                               [];
+                               FlowOpts0;
                            _ ->
-                               [optimize]
+                               [optimize | FlowOpts0]
                        end,
             {ok, _Ref, Flow} = dflow:build(Sender, FlowOpts),
+            dqe_span:log("preperation done"),
             dqe_lib:pdebug('query', "flow generated.", []),
             dflow:start(Flow, run),
-            case dflow_send:recv(WaitRef, Timeout) of
+            Recv = dflow_send:recv(WaitRef, Timeout),
+            dqe_span:log("query done"),
+            case Recv of
                 {ok, [{error, no_results}]} ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
+                    dqe_span:tag(result, "no results"),
+                    dqe_span:stop(),
                     {error, no_results};
                 {ok, [Result]} ->
                     %% Result1 = [Element || {points, Element} <- Result],
@@ -221,17 +238,29 @@ run(Query, Opts) ->
                               end,
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query complete.", []),
+                    dqe_span:tag(result, "success"),
+                    dqe_span:stop(),
                     {ok, Start, Result1};
                 {ok, []} ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
+                    dqe_span:tag(result, "no results"),
+                    dqe_span:stop(),
                     {error, no_results};
                 E ->
                     maybe_debug(Flow, Opts),
-                    dqe_lib:pdebug('query', "Query error: ~p", [E]),
+                    Es = io_lib:format("~p", [E]),
+                    dqe_lib:pdebug('query', "Query error: ~s", [Es]),
+                    dqe_span:tag(result, "error"),
+                    dqe_span:tag(error, Es),
+                    dqe_span:stop(),
                     E
             end;
         E ->
+            Es = io_lib:format("~p", [E]),
+            dqe_span:tag(result, "error"),
+            dqe_span:tag(error, Es),
+            dqe_span:stop(),
             E
     end.
 
