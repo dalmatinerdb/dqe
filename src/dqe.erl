@@ -42,6 +42,7 @@
 -type opts() :: debug |
                 log_slow_queries |
                 {trace_id, undefined | integer()} |
+                {parent_id, undefined | integer()} |
                 {slow_ms, pos_integer()} |
                 {token, binary()} |
                 {timeout, pos_integer() | infinity}.
@@ -172,15 +173,17 @@ run(Query) ->
 run(Query, Opts) ->
 
     TraceID = proplists:get_value(trace_id, Opts, undefined),
+    ParentID = proplists:get_value(parent_id, Opts, undefined),
     dqe_span:start(query, TraceID),
     dqe_span:tag(query, Query),
     FlowOpts0 = case proplists:get_value(token, Opts) of
                     Token when is_binary(Token)  ->
                         dqe_span:tag(debug_id, Token),
                         put(debug_id, filename:basename(Token)),
-                        [{trace_id, TraceID}];
+                        [{trace_id, TraceID}, {parent_id, ParentID}];
                     _ ->
-                        [terminate_when_done, {trace_id, TraceID}]
+                        [terminate_when_done, {trace_id, TraceID},
+                         {parent_id, ParentID}]
                 end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
     put(start, erlang:system_time()),
