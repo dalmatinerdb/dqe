@@ -63,7 +63,7 @@ start(run,
 start(run, State = #state{start = Start, count = Count,
                      bucket = Bucket, key = Key}) ->
     dflow_span:log("read ~p @ ~p", [Count, Start]),
-    case ddb_connection:get(Bucket, Key, Start, Count) of
+    case ddb_connection:get(Bucket, Key, Start, Count, ottersp:ids()) of
         {error, _Error} ->
             dflow_span:log("read failed"),
             {done, State};
