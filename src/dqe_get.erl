@@ -45,7 +45,7 @@ start(run,
     dflow_span:log("read ~p @ ~p", [Chunk, Start]),
     %% We do a bit of cheating here this allows us to loop.
     State1 = State#state{start = Start + Chunk, count = Count - Chunk},
-    case ddb_connection:get(Bucket, Key, Start, Chunk) of
+    case ddb_connection:get(Bucket, Key, Start, Chunk, ottersp:ids()) of
         {error, _Error} ->
             dflow_span:log("read failed"),
             {done, State};
