@@ -1,9 +1,12 @@
 [0m└─ dqe─0.5.0
-   ├─ ddb_connection─0.2.1
-   │  ├─ ddb_client─0.4.2
+   ├─ ddb_connection─0.3.3
+   │  ├─ ddb_client─0.5.3
+   │  ├─ otters─0.2.4
+   │  │  ├─ dynamic_compile─1.0.0
+   │  │  └─ ibrowse─4.4.0
    │  └─ poolboy─1.5.1
    ├─ dflow─0.1.7
-   ├─ dproto─0.4.1
+   ├─ dproto─0.5.1
    │  ├─ jsxd─0.2.4
    │  └─ snappiest─1.2.0
    ├─ dqe_fun─0.1.11
