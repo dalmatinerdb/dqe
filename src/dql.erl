@@ -102,6 +102,7 @@
 prepare(S) ->
     case parse(S) of
         {ok, {select, Qs, Aliases, T, Limit}} ->
+            dqe_span:log("parsed"),
             dqe_lib:pdebug('parse', "Query parsed: ~s", [S]),
             add_limit(Qs, Aliases, T, Limit);
         E ->
@@ -121,6 +122,7 @@ prepare(S) ->
 add_limit(Qs, Aliases, T, Limit) ->
     case expand_limit(Limit) of
         {ok, L1} ->
+            dqe_span:log("limits expanded"),
             case expand_aliases(Qs, Aliases, T) of
                 {ok, Parts, Start} ->
                     {ok, Parts, Start, L1};
@@ -153,6 +155,7 @@ expand_limit({Direction, Count,
 expand_aliases(Qs, Aliases, T) ->
     case dql_alias:expand(Qs, Aliases) of
         {ok, Qs1} ->
+            dqe_span:log("aliases expanded"),
             resolve_query_functions(Qs1, T);
         E ->
             E
@@ -170,6 +173,7 @@ expand_aliases(Qs, Aliases, T) ->
 resolve_query_functions(Qs, T) ->
     case dql_resolver:resolve(Qs) of
         {ok, Qs1} ->
+            dqe_span:log("functions resolved"),
             flatten_step(Qs1, T);
         E ->
             E
@@ -185,6 +189,7 @@ resolve_query_functions(Qs, T) ->
 flatten_step(Qs, T) ->
     Qs1 = dql_flatten:flatten(Qs),
     dqe_lib:pdebug('parse', "Query flattened.", []),
+    dqe_span:log("query flattend"),
     expand(Qs1, T).
 
 %%--------------------------------------------------------------------
@@ -196,6 +201,7 @@ flatten_step(Qs, T) ->
                     {'ok',[query_stmt()], pos_integer()}.
 expand(Qs, T) ->
     Qs1 = dql_expand:expand(Qs),
+    dqe_span:log("query expanded"),
     get_resolution(Qs1, T).
 
 %%--------------------------------------------------------------------
@@ -212,6 +218,7 @@ get_resolution(Qs, T) ->
         {error, E} ->
             {error, E};
         {ok, Qs1} ->
+            dqe_span:log("resolutions resolved"),
             propagate_resolutions(Qs1, T)
     end.
 
@@ -223,10 +230,13 @@ get_resolution(Qs, T) ->
 propagate_resolutions(Qs, T) ->
     Qs1 = dql_resolution:propagate(Qs),
     Start = dql_resolution:start_time(T),
+    dqe_span:log("resolutions propagated"),
+    dqe_span:tag(start, Start),
     apply_names(Qs1, Start).
 
 apply_names(Qs, Start) ->
     Qs1 = dql_naming:update(Qs),
+    dqe_span:log("names applied"),
     {ok, Qs1, Start}.
 
 %%%===================================================================
