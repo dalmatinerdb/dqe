@@ -1,15 +1,12 @@
-                                  "https://github.com/project-fifo/otter.git",
-                                  {ref,
-                                      "8a78f88236fb85d991e96c1947ab095c82e2f931"}})
 [0m└─ dqe─0.6.0
    ├─ ddb_connection─0.3.3
    │  ├─ ddb_client─0.5.3
    │  └─ poolboy─1.5.1
-   ├─ dflow─0.1.7
+   ├─ dflow─0.2.1
    ├─ dproto─0.5.1
    │  ├─ jsxd─0.2.4
    │  └─ snappiest─1.2.0
-   ├─ dqe_fun─0.1.11
+   ├─ dqe_fun─0.2.0
    ├─ dqe_idx─0.2.1
    ├─ dqe_idx_ddb─0.2.4
    ├─ dqe_idx_pg─0.3.6
