@@ -30,7 +30,7 @@ prop_prepare() ->
            ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
-                       case ?P:prepare(Unparsed) of
+                       case ?P:prepare(Unparsed, []) of
                            {ok, _, _, _} ->
                                true;
                            {error, E} ->
@@ -45,7 +45,7 @@ prop_dflow_prepare() ->
            ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
-                       case dqe:prepare(Unparsed) of
+                       case dqe:prepare(Unparsed, []) of
                            {ok, _, _, _} ->
                                true;
                            {error, E} ->
@@ -75,8 +75,9 @@ mock() ->
     ensure_dqe_fun(),
     meck:new(dqe_idx, [passthrough]),
     meck:expect(dqe_idx, lookup,
-                fun (_, _) ->
-                        {ok, [{<<"a">>, <<"a">>, [<<"a">>]}]}
+                fun (_Q, Start, End, _Opts, _G) ->
+                        {ok, [{{<<"a">>, <<"a">>, [{Start, End, default}]},
+                               [<<"a">>]}]}
                 end),
 
     fun unmock/0.

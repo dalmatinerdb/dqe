@@ -6,75 +6,86 @@
 -record(state, {
           bucket :: binary(),
           key :: binary(),
-          start :: non_neg_integer(),
-          count :: non_neg_integer(),
+          ranges :: [{non_neg_integer(), non_neg_integer(), term()}],
           chunk :: pos_integer(),
           logged = false :: boolean()
          }).
 
-init([Start, Count, Resolution, Bucket, Key]) ->
+init([Ranges, Bucket, Key]) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
-    init([Start, Count, Resolution, Bucket, Key, Chunk]);
-init([Start, Count, Resolution, Bucket, KeyL, Chunk]) when is_list(KeyL)->
+    init([Ranges, Bucket, Key, Chunk]);
+init([Ranges, Bucket, KeyL, Chunk]) when is_list(KeyL)->
     Key = dproto:metric_from_list(KeyL),
-    init([Start, Count, Resolution, Bucket, Key, Chunk]);
-init([Start, Count, _Resolution, Bucket, Key, Chunk]) ->
-    {ok, #state{start = Start, count = Count, bucket = Bucket, key = Key,
+    init([Ranges, Bucket, Key, Chunk]);
+init([Ranges, Bucket, Key, Chunk]) ->
+    Ranges1 = rearrange_ranges(Ranges, Chunk, []),
+    {ok, #state{ranges = Ranges1, bucket = Bucket, key = Key,
                 chunk = Chunk}, []}.
+
+rearrange_ranges([], _Chunk, Acc) ->
+    lists:reverse(Acc);
+
+rearrange_ranges([{Start, End, _} = E | Rest], Chunk, Acc)
+  when End - Start =< Chunk ->
+    rearrange_ranges(Rest, Chunk, [E | Acc]);
+
+rearrange_ranges([{Start, End, Endpoint} | Rest], Chunk, Acc) ->
+    NewEnd = Start + Chunk - 1,
+    Acc1 = [{Start, NewEnd, Endpoint} | Acc],
+    NewIn = [{NewEnd + 1, End, Endpoint} | Rest],
+    rearrange_ranges(NewIn, Chunk,  Acc1).
 
 describe(#state{bucket = Bucket, key = Key}) ->
     [Bucket, "/", dproto:metric_to_string(Key, <<".">>)].
 
-start(run, State = #state{count = 0}) ->
+start(run, State = #state{ranges = []}) ->
     {done, State};
 
 start(run, State = #state{logged = false,
-                          start = Start, count = Count, chunk = Chunk,
+                          ranges = [{Start, _End, _Endpoint} | _],
                           bucket = Bucket, key = Key}) ->
+    %% TODO = count
     dflow_span:tag(bucket, Bucket),
     dflow_span:tag(metric, Key),
     dflow_span:tag(start, Start),
-    dflow_span:tag(count, Count),
-    dflow_span:tag(chunk, Chunk),
     start(run, State#state{logged = true});
 
 start(run,
-      State = #state{start = Start, count = Count, chunk = Chunk,
-                     bucket = Bucket, key = Key}) when
-      Count >= Chunk ->
-    dflow_span:log("read ~p @ ~p", [Chunk, Start]),
+      State = #state{ranges = [{Start, End, null} | Rest]})  ->
+    Count = End - Start,
+    dflow_span:log("null ~p @ ~p", [Count, Start]),
     %% We do a bit of cheating here this allows us to loop.
-    State1 = State#state{start = Start + Chunk, count = Count - Chunk},
-    case ddb_connection:get(Bucket, Key, Start, Chunk, ottersp:get_span()) of
+    State1 = State#state{ranges = Rest},
+    {emit, mmath_bin:realize(mmath_bin:empty(Count)), State1};
+
+start(run,
+      State = #state{ranges = [{Start, End, default} | Rest]})  ->
+    Ranges1 = [{Start, End, {pool, ddb_connection:pool()}} | Rest],
+    start(run, State#state{ranges = Ranges1});
+
+start(run,
+      State = #state{ranges = [{Start, End, {pool, Pool}} | Rest],
+                     bucket = Bucket, key = Key})  ->
+    Count = End - Start,
+    dflow_span:log("read ~p @ ~p", [Count, Start]),
+    %% We do a bit of cheating here this allows us to loop.
+    State1 = State#state{ranges = Rest},
+    case ddb_connection:get(Pool, Bucket, Key, Start, Count,
+                            ottersp:get_span()) of
         {error, _Error} ->
             dflow_span:log("read failed"),
             {done, State};
         {ok, <<>>} ->
             dflow_span:log("empty result"),
             dflow:start(self(), run),
-            {emit, mmath_bin:realize(mmath_bin:empty(Chunk)), State1};
+            {emit, mmath_bin:realize(mmath_bin:empty(Count)), State1};
         {ok, Data} ->
             dflow_span:log("read ~p datapoints, ~p bytes",
                            [mmath_bin:length(Data), byte_size(Data)]),
             dflow:start(self(), run),
             {emit, mmath_bin:realize(Data), State1}
-    end;
-
-start(run, State = #state{start = Start, count = Count,
-                     bucket = Bucket, key = Key}) ->
-    dflow_span:log("read ~p @ ~p", [Count, Start]),
-    case ddb_connection:get(Bucket, Key, Start, Count, ottersp:get_span()) of
-        {error, _Error} ->
-            dflow_span:log("read failed"),
-            {done, State};
-        {ok, <<>>} ->
-            dflow_span:log("empty result"),
-            {done, mmath_bin:realize(mmath_bin:empty(Count)), State};
-        {ok, Data} ->
-            dflow_span:log("read ~p datapoints, ~p bytes",
-                           [mmath_bin:length(Data), byte_size(Data)]),
-            {done, mmath_bin:realize(Data), State}
     end.
+
 
 emit(_Child, _Data, State) ->
     {ok, State}.

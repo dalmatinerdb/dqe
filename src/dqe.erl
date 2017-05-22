@@ -10,7 +10,7 @@
 %%%-------------------------------------------------------------------
 -module(dqe).
 
--export([prepare/1, run/1, run/2, error_string/1, init/0]).
+-export([prepare/2, run/1, run/2, error_string/1, init/0]).
 
 -type metric_reply() :: #{
                     name       => binary(),
@@ -167,13 +167,14 @@ run(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec run(Query :: dql:raw_query(), Timeout :: [opts()]) ->
+-spec run(Query :: dql:raw_query(), Opts :: [opts()]) ->
                  {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
 run(Query, Opts) ->
 
     TraceID = proplists:get_value(trace_id, Opts, undefined),
     ParentID = proplists:get_value(parent_id, Opts, undefined),
+    IdxOpts = proplists:get_value(idx_opts, Opts, []),
     dqe_span:start(query, TraceID),
     dqe_span:tag(query, Query),
     FlowOpts0 = case proplists:get_value(token, Opts) of
@@ -187,7 +188,7 @@ run(Query, Opts) ->
                 end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
     put(start, erlang:system_time()),
-    case prepare(Query) of
+    case prepare(Query, IdxOpts) of
         {ok, {0, 0, _Parts}, _Start, _Limit} ->
             dqe_lib:pdebug('query', "prepare found no metrics.", []),
             dqe_span:tag(result, "no metrics"),
@@ -315,7 +316,7 @@ maybe_debug(Flow, Opts) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec prepare(Query :: dql:raw_query()) ->
+-spec prepare(Query :: dql:raw_query(), [term()]) ->
                      {ok, {Total  :: non_neg_integer(),
                            Unique :: non_neg_integer(),
                            DFlows :: [dflow:step()]},
@@ -323,8 +324,8 @@ maybe_debug(Flow, Opts) ->
                       Limit :: dql:limit()} |
                      {error, _}.
 
-prepare(Query) ->
-    case dql:prepare(Query) of
+prepare(Query, IdxOpts) ->
+    case dql:prepare(Query, IdxOpts) of
         {ok, Parts, Start, Limit} ->
             dqe_lib:pdebug('prepare', "Parsing done.", []),
             {Total, Unique} = count_parts(Parts),
@@ -394,7 +395,7 @@ extract_gets({calc, _, O = #{op := events}}) ->
     [O];
 extract_gets({calc, _, C}) ->
     extract_gets(C);
-extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
+extract_gets(#{op := get, args := [B, M]}) ->
     {B, M}.
 
 
@@ -414,39 +415,6 @@ translate(#{op := events, times := [Start, End],
 translate({calc, [], G}) ->
     translate(G);
 
-%% Sadly this isn't really working, leave it in here.
-%% translate({calc,
-%%            [#{op := fcall,
-%%               resolution := R,
-%%               args :=
-%%                   #{
-%%                     mod := Mod,
-%%                 state := State
-%%               }}],
-%%            #{op := get, args := Args}}) ->
-%%     G1 = {dqe_get_fun, [Mod, State] ++ Args},
-%%     {ok, R, G1};
-
-%% translate({calc,
-%%            [#{op := fcall,
-%%               args := #{
-%%                     mod := Mod,
-%%                state := State
-%%               }} | Aggrs],
-%%            #{op := get, args := Args}}) ->
-%%     FoldFn = fun(#{op := fcall,
-%%                    args := #{
-%%                          mod := ModX,
-%%                      state := StateX
-%%                     }}, Acc) ->
-%%                      {dqe_fun_flow, [ModX, StateX, Acc]}
-%%              end,
-%%     #{resolution := R} = lists:last(Aggrs),
-%%     G1 = {dqe_get_fun, [Mod, State] ++ Args},
-%%     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
-
-%% TODO we can do this better!
-
 translate({calc, Aggrs, G}) ->
     FoldFn = fun(#{op := fcall,
                    args := #{
@@ -459,8 +427,8 @@ translate({calc, Aggrs, G}) ->
     {ok, _R, G1} = translate(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 
-translate(#{op := get, resolution := R, args := Args}) ->
-    {ok, R, {dqe_get, Args}};
+translate(#{op := get, resolution := R, args := Args, ranges := Ranges}) ->
+    {ok, R, {dqe_get, [Ranges | Args]}};
 
 translate({combine,
              #{resolution := R, args := #{mod := Mod, state := State}},

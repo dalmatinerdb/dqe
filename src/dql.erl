@@ -1,6 +1,6 @@
 -module(dql).
 
--export([prepare/1, parse/1]).
+-export([prepare/2, parse/1]).
 -ignore_xref([parse/1]).
 
 -export_type([query_part/0, dqe_fun/0, query_stmt/0, get_stmt/0, flat_stmt/0,
@@ -11,7 +11,10 @@
 
 -type time() :: #{ op => time,
                    args => [pos_integer() | time_unit()]} |
+                #{'args'=>['now' | pos_integer() | map()],
+                  'op'=>'between' | 'last'} |
                 #{ op => timeshift } | pos_integer().
+
 
 -type relative_time() :: time() |
                          now |
@@ -52,8 +55,9 @@
          }.
 
 -type get_stmt() ::
-        #{op => get, args => [[binary()] | non_neg_integer()]} |
-        #{op => sget, args => [[binary() | '*'] | non_neg_integer()]}.
+        #{op => get, args => [[binary()]], resolution => pos_integer(),
+          ranges => [{pos_integer(), pos_integer(), term()}]} |
+        #{op => sget, args => [[binary() | '*']], resolution => pos_integer()}.
 
 -type query_part() :: cmb_stmt() | flat_stmt().
 
@@ -96,15 +100,15 @@
 %% engine to execute.
 %% @end
 %%--------------------------------------------------------------------
--spec prepare(raw_query()) ->
+-spec prepare(raw_query(), Opts :: [term()]) ->
                      {error, term()} |
                      {ok, [query_stmt()], pos_integer(), limit()}.
-prepare(S) ->
+prepare(S, IdxOpts) ->
     case parse(S) of
         {ok, {select, Qs, Aliases, T, Limit}} ->
             dqe_span:log("parsed"),
             dqe_lib:pdebug('parse', "Query parsed: ~s", [S]),
-            add_limit(Qs, Aliases, T, Limit);
+            add_limit(Qs, Aliases, T, Limit, IdxOpts);
         E ->
             E
     end.
@@ -119,11 +123,11 @@ prepare(S) ->
 %% @end
 %%--------------------------------------------------------------------
 
-add_limit(Qs, Aliases, T, Limit) ->
+add_limit(Qs, Aliases, T, Limit, IdxOpts) ->
     case expand_limit(Limit) of
         {ok, L1} ->
             dqe_span:log("limits expanded"),
-            case expand_aliases(Qs, Aliases, T) of
+            case expand_aliases(Qs, Aliases, T, IdxOpts) of
                 {ok, Parts, Start} ->
                     {ok, Parts, Start, L1};
                 E1 ->
@@ -152,11 +156,11 @@ expand_limit({Direction, Count,
 %% @doc Expand aliases
 %% @end
 %%--------------------------------------------------------------------
-expand_aliases(Qs, Aliases, T) ->
+expand_aliases(Qs, Aliases, T, IdxOpts) ->
     case dql_alias:expand(Qs, Aliases) of
         {ok, Qs1} ->
             dqe_span:log("aliases expanded"),
-            resolve_query_functions(Qs1, T);
+            resolve_query_functions(Qs1, T, IdxOpts);
         E ->
             E
     end.
@@ -167,14 +171,14 @@ expand_aliases(Qs, Aliases, T) ->
 %% to dqe_fun functions.
 %% @end
 %%--------------------------------------------------------------------
--spec resolve_query_functions([statement()], time()) ->
+-spec resolve_query_functions([statement()], time(), [term()]) ->
                      {error, term()} |
                      {ok, [query_stmt()], pos_integer()}.
-resolve_query_functions(Qs, T) ->
+resolve_query_functions(Qs, T, IdxOpts) ->
     case dql_resolver:resolve(Qs) of
         {ok, Qs1} ->
             dqe_span:log("functions resolved"),
-            flatten_step(Qs1, T);
+            flatten_step(Qs1, T, IdxOpts);
         E ->
             E
     end.
@@ -184,42 +188,51 @@ resolve_query_functions(Qs, T) ->
 %% @doc Flattens the tree into a list of flat queries.
 %% @end
 %%--------------------------------------------------------------------
--spec flatten_step([statement()], time()) ->
+-spec flatten_step([statement()], time(), [term()]) ->
                           {ok, [query_stmt()], pos_integer()}.
-flatten_step(Qs, T) ->
+flatten_step(Qs, T, IdxOpts) ->
     Qs1 = dql_flatten:flatten(Qs),
     dqe_lib:pdebug('parse', "Query flattened.", []),
     dqe_span:log("query flattend"),
-    expand(Qs1, T).
+    compute_start_and_end(Qs1, T, IdxOpts).
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc Computes startand end time of the query
+%% @end
+%%--------------------------------------------------------------------
+compute_start_and_end(Qs, T, IdxOpts) ->
+    {Start, End} = dql_resolution:time_range(T),
+    expand(Qs, Start, End, IdxOpts).
 
 %%--------------------------------------------------------------------
 %% @private
 %% @doc Expand lookup and glob.
 %% @end
 %%--------------------------------------------------------------------
--spec expand([flat_stmt()], time()) ->
+-spec expand([flat_stmt()], pos_integer(), pos_integer(), [term()]) ->
                     {'ok',[query_stmt()], pos_integer()}.
-expand(Qs, T) ->
-    Qs1 = dql_expand:expand(Qs),
+expand(Qs, Start, End, IdxOpts) ->
+    Qs1 = dql_expand:expand(Qs, Start, End, IdxOpts),
     dqe_span:log("query expanded"),
-    get_resolution(Qs1, T).
+    get_resolution(Qs1, Start, End).
 
 %%--------------------------------------------------------------------
 %% @private
 %% @doc Fetch the resolution for each sub query.
 %% @end
 %%--------------------------------------------------------------------
--spec get_resolution([flat_stmt()], time()) ->
+-spec get_resolution([flat_stmt()], pos_integer(), pos_integer()) ->
                             {error, term()} |
                             {'ok',[query_stmt()],
                              pos_integer()}.
-get_resolution(Qs, T) ->
-    case dql_resolution:resolve(Qs, T) of
+get_resolution(Qs, Start, End) ->
+    case dql_resolution:resolve(Qs) of
         {error, E} ->
             {error, E};
         {ok, Qs1} ->
             dqe_span:log("resolutions resolved"),
-            propagate_resolutions(Qs1, T)
+            propagate_resolutions(Qs1, Start, End)
     end.
 
 %%--------------------------------------------------------------------
@@ -227,9 +240,8 @@ get_resolution(Qs, T) ->
 %% @doc calculate resolutions for the whole call stack.
 %% @end
 %%--------------------------------------------------------------------
-propagate_resolutions(Qs, T) ->
+propagate_resolutions(Qs, Start, _End) ->
     Qs1 = dql_resolution:propagate(Qs),
-    Start = dql_resolution:start_time(T),
     dqe_span:log("resolutions propagated"),
     dqe_span:tag(start, Start),
     apply_names(Qs1, Start).
@@ -280,3 +292,6 @@ lexer_error(Line, {illegal, E})  ->
 lexer_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
                                          [Line, E]))}.
+
+
+%% f(), Q = "SELECT avg(base.network.bridge0.dropout_per_sec FROM '56680beade062a1d6da04563', 10s) LAST 1m".

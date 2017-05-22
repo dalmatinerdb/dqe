@@ -54,19 +54,23 @@ rel_time() ->
 hfun() ->
     oneof([min, max, avg, mean, median, stddev]).
 
-
 aliases() ->
     [].
+
+a_time() ->
+    #{args => [pos_int(), time_unit()],
+      op => time,return => time,
+      signature => [integer,time_unit]}.
 
 select_stmt() ->
     {select,
      non_empty_list(?SIZED(Size, maybe_named(Size))),
      aliases(),
      oneof([
-            #{op => last, args => [pos_int()]},
-            #{op => between, args => [rel_time(), pos_int()]},
-            #{op => before, args => [rel_time(), pos_int()]},
-            #{op => 'after', args => [pos_int(), pos_int()]}
+            #{op => last, args => [a_time()]},
+            #{op => between, args => [rel_time(), rel_time()]},
+            #{op => before, args =>  [rel_time(), a_time()]},
+            #{op => 'after', args => [rel_time(), a_time()]}
            ]),
     limit()}.
 
