@@ -1,7 +1,7 @@
 %% -*- erlang -*-
 Nonterminals
 funs fun selector select timeframe aliases alias int_or_time mb fune tag pit
-glob_metric part_or_name calculatable fun_arg fun_args gmb bucket
+glob_metric part_or_name calculatable fun_arg fun_args gmb bucket time_unit
 mfrom var metric where where_part as_part as_clause maybe_shifted
 math math1 math2 number number2 number3  maybe_scoped_dvar
 maybe_group_by grouping metric_or_all limit limit_direction
@@ -305,11 +305,12 @@ alias -> maybe_shifted kw_as part_or_name : {alias, '$3', '$1'}.
 %%%===================================================================
 
 %% A timeframe for the select statment
-timeframe -> kw_last    int_or_time                    : #{op => last,    args => ['$2']}.
-timeframe -> kw_between pit         kw_and pit         : #{op => between, args => ['$2', '$4']}.
-timeframe -> kw_after   pit         kw_for int_or_time : #{op => 'after', args => ['$2', '$4']}.
-timeframe -> kw_before  pit         kw_for int_or_time : #{op => before,  args => ['$2', '$4']}.
+timeframe -> kw_last    time_unit                  : #{op => last,    args => ['$2']}.
+timeframe -> kw_between pit       kw_and pit       : #{op => between, args => ['$2', '$4']}.
+timeframe -> kw_after   pit       kw_for time_unit : #{op => 'after', args => ['$2', '$4']}.
+timeframe -> kw_before  pit       kw_for time_unit : #{op => before,  args => ['$2', '$4']}.
 
+time_unit -> integer time : time(unwrap('$1'), unwrap('$2')).
 
 %% A point in time either a integer, a relative time with a AGO statement or the
 %% NOW keyword.
@@ -319,8 +320,8 @@ pit          -> date : {time, qdate:to_unixtime(unwrap('$1')) * 1000, ms}.
 pit          -> kw_now : now.
 
 %% A relative time either given as absolute integer or relative.
-int_or_time  -> integer time : time(unwrap('$1'), unwrap('$2')).
-int_or_time  -> integer : unwrap('$1').
+int_or_time  -> time_unit : '$1'.
+int_or_time  -> integer   : unwrap('$1').
 
 %%%===================================================================
 %%% Helper symbols

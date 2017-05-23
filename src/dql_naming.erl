@@ -23,10 +23,10 @@ update(Qs) ->
 %%%===================================================================
 
 
-update_name({named, L, M, C = {calc,_,#{op := events}}}) when is_list(L) ->
+update_name({named, L, M, C = {calc, _, #{op := events}}}) when is_list(L) ->
     {named, dql_unparse:unparse_metric(L), M, C};
 
-update_name({named, N, M, C = {calc,_,#{op := events}}}) when is_binary(N) ->
+update_name({named, N, M, C = {calc, _, #{op := events}}}) when is_binary(N) ->
     {named, N, M, C};
 
 update_name({named, L, M, C}) when is_list(L)->
@@ -48,10 +48,10 @@ update_name_element({pvar, N}, Path, _Gs) ->
 update_name_element(N, _, _) ->
     N.
 
-extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
+extract_path_and_groupings(G = #{op := get, args := [_, Path]})
   when is_list(Path) ->
     {Path, extract_groupings(G)};
-extract_path_and_groupings(G = #{op := get, args := [_,_,_,_,Path]})
+extract_path_and_groupings(G = #{op := get, args := [_, Path]})
   when is_binary(Path) ->
     {dproto:metric_to_list(Path), extract_groupings(G)};
 

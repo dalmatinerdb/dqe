@@ -26,12 +26,12 @@ unparse(#{op   := fcall,
 unparse(#{op   := events,
           args := #{bucket := Bucket,
                     filter := []}}) ->
-    <<"EVENTS FROM ", Bucket/binary>>;
+    <<"EVENTS FROM '", Bucket/binary, "'">>;
 unparse(#{op   := events,
           args := #{bucket := Bucket,
                     filter := Filter}}) ->
     FilterS = unparse_filter(Filter),
-    <<"EVENTS FROM ", Bucket/binary, " WHERE ", FilterS/binary>>;
+    <<"EVENTS FROM '", Bucket/binary, "' WHERE ", FilterS/binary>>;
 
 unparse(#{op   := combine,
           args := #{name      := Name,
