@@ -211,7 +211,7 @@ compute_start_and_end(Qs, T, IdxOpts) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec expand([flat_stmt()], pos_integer(), pos_integer(), [term()]) ->
-                    {'ok',[query_stmt()], pos_integer()}.
+                    {'ok', [query_stmt()], pos_integer()}.
 expand(Qs, Start, End, IdxOpts) ->
     Qs1 = dql_expand:expand(Qs, Start, End, IdxOpts),
     dqe_span:log("query expanded"),
@@ -224,7 +224,7 @@ expand(Qs, Start, End, IdxOpts) ->
 %%--------------------------------------------------------------------
 -spec get_resolution([flat_stmt()], pos_integer(), pos_integer()) ->
                             {error, term()} |
-                            {'ok',[query_stmt()],
+                            {'ok', [query_stmt()],
                              pos_integer()}.
 get_resolution(Qs, Start, End) ->
     case dql_resolution:resolve(Qs) of
@@ -270,7 +270,7 @@ parse(S) when is_binary(S)->
 
 parse(S) ->
     case dql_lexer:string(S) of
-        {error,{Line, dql_lexer,E},1} ->
+        {error, {Line, dql_lexer, E}, 1} ->
             lexer_error(Line, E);
         {ok, L, _} ->
             case dql_parser:parse(L) of
@@ -292,6 +292,3 @@ lexer_error(Line, {illegal, E})  ->
 lexer_error(Line, E)  ->
     {error, list_to_binary(io_lib:format("Lexer error in line ~p: ~s",
                                          [Line, E]))}.
-
-
-%% f(), Q = "SELECT avg(base.network.bridge0.dropout_per_sec FROM '56680beade062a1d6da04563', 10s) LAST 1m".

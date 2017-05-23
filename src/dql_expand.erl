@@ -30,14 +30,16 @@ expand_grouped(Q = #{op := named, args := [L, M, S]},
     [Q#{args => [L, M, S1]} ||
         S1 <- expand_grouped(S, Start, End, Gs ++ MGs ++  Groupings, Opts)];
 
-expand_grouped(Q = #{op := named, args := [N, M, S]}, Start, End, Groupings, Opts) ->
+expand_grouped(Q = #{op := named, args := [N, M, S]},
+               Start, End, Groupings, Opts) ->
     MGs = [D || {_, {dvar, D}} <- M],
     [Q#{args => [N, M, S1]} ||
         S1 <- expand_grouped(S, Start, End, MGs ++ Groupings, Opts)];
 
 expand_grouped(Q = #{op := timeshift, args := [T, S]},
                Start, End, Groupings, Opts) ->
-    [Q#{args => [T, S1]} || S1 <- expand_grouped(S, Start, End, Groupings, Opts)];
+    [Q#{args => [T, S1]} ||
+        S1 <- expand_grouped(S, Start, End, Groupings, Opts)];
 
 expand_grouped({calc, Fs, Q}, Start, End, Groupings, Opts) ->
     [{calc, Fs, Q1} || Q1 <- expand_grouped(Q, Start, End, Groupings, Opts)];

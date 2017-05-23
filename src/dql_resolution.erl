@@ -128,7 +128,7 @@ get_times_({calc, Chain, Get}, Shift, BucketResolutions) ->
     {ok, Get1 = #{ranges := Ranges,
                   resolution := Rms}, BucketResolutions1} =
         bucket_resolution(Get, BucketResolutions),
-    Ranges1 = [{(Start - Shift) div Rms, (End - Shift) div Rms, Endpoint} 
+    Ranges1 = [{(Start - Shift) div Rms, (End - Shift) div Rms, Endpoint}
                || {Start, End, Endpoint} <- Ranges],
     Calc1 = {calc, Chain, Get1#{resolution => Rms,
                                 ranges => Ranges1}},

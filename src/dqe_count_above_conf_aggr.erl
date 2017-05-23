@@ -26,7 +26,8 @@ resolution(Resolution, State = #state{time = Time}) ->
     {Res, State#state{count = Res}}.
 
 describe(#state{const = Const, time = Time})->
-    ["count_above_conf(", float_to_list(Const), ", ", integer_to_list(Time), ",s)"].
+    ["count_above_conf(", float_to_list(Const), ", ",
+     integer_to_list(Time), ",s)"].
 
 spec() ->
     [{<<"count_above_conf">>, [metric, integer, time], none, metric},

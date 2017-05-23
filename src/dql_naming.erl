@@ -23,10 +23,10 @@ update(Qs) ->
 %%%===================================================================
 
 
-update_name({named, L, M, C = {calc,_,#{op := events}}}) when is_list(L) ->
+update_name({named, L, M, C = {calc, _, #{op := events}}}) when is_list(L) ->
     {named, dql_unparse:unparse_metric(L), M, C};
 
-update_name({named, N, M, C = {calc,_,#{op := events}}}) when is_binary(N) ->
+update_name({named, N, M, C = {calc, _, #{op := events}}}) when is_binary(N) ->
     {named, N, M, C};
 
 update_name({named, L, M, C}) when is_list(L)->
