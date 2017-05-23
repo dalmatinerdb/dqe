@@ -64,9 +64,10 @@ start(run,
     start(run, State#state{ranges = Ranges1});
 
 start(run,
-      State = #state{ranges = [{Start, End, {pool, Pool}} | Rest],
+      State = #state{ranges = [{Start, End, Endpoint} | Rest],
                      bucket = Bucket, key = Key})  ->
     Count = End - Start,
+    Pool = dqe_util:get_pool(Endpoint),
     dflow_span:log("read ~p @ ~p", [Count, Start]),
     %% We do a bit of cheating here this allows us to loop.
     State1 = State#state{ranges = Rest},

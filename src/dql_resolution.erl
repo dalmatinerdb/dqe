@@ -178,24 +178,34 @@ map_constants(E) ->
 
 -spec bucket_resolution(dql:get_stmt(), #{}) ->
                                {ok, dql:get_stmt(), #{}}.
-bucket_resolution(O = #{args := [Bucket| _]}, BucketResolutions)
+bucket_resolution(O = #{args := [Bucket| _],
+                       ranges := Ranges},
+                  BucketResolutions)
   when is_binary(Bucket)->
-    {Res, BR1} = case maps:get(Bucket, BucketResolutions, undefined) of
+    Endpoint = extract_endpoint(Ranges),
+    {Res, BR1} = case  maps:get({Endpoint, Bucket},
+                                BucketResolutions, undefined) of
                      undefined ->
-                         {ok, R} = get_br(Bucket),
-                         {R, maps:put(Bucket, R, BucketResolutions)};
+                         {ok, R} = get_br(Endpoint, Bucket),
+                         {R, maps:put({Endpoint, Bucket}, R,
+                                      BucketResolutions)};
                      R ->
                          {R, BucketResolutions}
                  end,
     {ok, O#{resolution => Res}, BR1}.
 
+extract_endpoint([{_, _, null} | R]) ->
+    extract_endpoint(R);
+extract_endpoint([{_, _, E} | _]) ->
+    E.
+
 %%--------------------------------------------------------------------
 %% @doc Fetch the resolution of a bucket from DDB
 %% @end
 %%--------------------------------------------------------------------
--spec get_br(binary()) -> {ok, pos_integer()}.
-get_br(Bucket) ->
-    ddb_connection:resolution(Bucket).
+-spec get_br(term(), binary()) -> {ok, pos_integer()}.
+get_br(Endpoint, Bucket) ->
+    ddb_connection:resolution(dqe_util:get_pool(Endpoint), Bucket).
 
 %%--------------------------------------------------------------------
 %% @doc Propagates resolution from the bottom of a call to the top.

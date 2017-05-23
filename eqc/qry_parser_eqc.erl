@@ -58,13 +58,17 @@ prop_dflow_prepare() ->
 mock() ->
     application:ensure_all_started(dqe_connection),
     meck:new(ddb_connection),
+    meck:expect(ddb_connection, pool,
+                fun () ->
+                        default
+                end),
     meck:expect(ddb_connection, list,
                 fun (_) ->
                         M = [<<"a">>, <<"b">>, <<"c">>],
                         {ok, [dproto:metric_from_list(M)]}
                 end),
     meck:expect(ddb_connection, resolution,
-                fun (_) ->
+                fun (_, _) ->
                         {ok, 1000}
                 end),
     meck:expect(ddb_connection, list,
