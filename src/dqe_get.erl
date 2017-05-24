@@ -55,6 +55,7 @@ start(run,
     Count = End - Start,
     dflow_span:log("null ~p @ ~p", [Count, Start]),
     %% We do a bit of cheating here this allows us to loop.
+    dflow:start(self(), run),
     State1 = State#state{ranges = Rest},
     {emit, mmath_bin:realize(mmath_bin:empty(Count)), State1};
 
