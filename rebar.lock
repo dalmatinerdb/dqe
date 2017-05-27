@@ -7,7 +7,7 @@
  {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.2.0">>},0},
  {<<"dqe_idx">>,{pkg,<<"dqe_idx">>,<<"0.3.0">>},0},
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.4.0">>},0},
- {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.4.0">>},0},
+ {<<"dqe_idx_pg">>,{pkg,<<"dqe_idx_pg">>,<<"0.4.1">>},0},
  {<<"dynamic_compile">>,{pkg,<<"dynamic_compile">>,<<"1.0.0">>},1},
  {<<"epgsql">>,{pkg,<<"epgsql">>,<<"3.3.0">>},2},
  {<<"erlware_commons">>,{pkg,<<"erlware_commons">>,<<"1.0.0">>},0},
@@ -28,7 +28,8 @@
        {ref,"fcfb8105014b8bef19f50dd89647c0e58dae0903"}},
   0},
  {<<"qdate_localtime">>,{pkg,<<"qdate_localtime">>,<<"1.1.0">>},1},
- {<<"snappiest">>,{pkg,<<"snappiest">>,<<"1.2.0">>},1}]}.
+ {<<"snappiest">>,{pkg,<<"snappiest">>,<<"1.2.0">>},1},
+ {<<"sqlmig">>,{pkg,<<"sqlmig">>,<<"0.1.4">>},1}]}.
 [
 {pkg_hash,[
  {<<"cf">>, <<"7F2913FFF90ABCABD0F489896CFEB0B0674F6C8DF6C10B17A83175448029896C">>},
@@ -39,7 +40,7 @@
  {<<"dqe_fun">>, <<"BA26ED83AC2A75B6D9A448413416AACE21B5D057DA9FB7E8ECEAAE3B45E9DA3A">>},
  {<<"dqe_idx">>, <<"EDCA91E5130C532D4B33AF678197ADC25AA4FA7471AC75033290F8AD8392874D">>},
  {<<"dqe_idx_ddb">>, <<"815DB58A7ED01A7040E43A9228DDD119738C4C743F1F33D61E550AAE83CF4319">>},
- {<<"dqe_idx_pg">>, <<"198FDE786226CB4688C3F9A06A74C765CAAFF0ED0F5528A4D56D73A54305F2FA">>},
+ {<<"dqe_idx_pg">>, <<"1BC018855A9565856938F5919C4DC5FB0E8ECEF7FC271D5378D9B4589D3F01B3">>},
  {<<"dynamic_compile">>, <<"8171B2CB4953EA3ED2EF63F5B26ABF677ACD0CA32210C2A08A7A8406A743F76B">>},
  {<<"epgsql">>, <<"974A578340E52012CBAB820CE756E7ED1DF1BAF0110C59A6753D8337A2CF9454">>},
  {<<"erlware_commons">>, <<"087467DE5833C0BB5B3CCDD387F9E9C1FB816A75B7A709629BF24B5ED3246C51">>},
@@ -52,5 +53,6 @@
  {<<"pgapp">>, <<"3E104BB777C8455D8B26D1538B67ABE0188EE97B1DF973FD936C2204CB316196">>},
  {<<"poolboy">>, <<"6B46163901CFD0A1B43D692657ED9D7E599853B3B21B95AE5AE0A777CF9B6CA8">>},
  {<<"qdate_localtime">>, <<"5F6C3ACF10ECC5A7E2EFA3DCD2C863102B962188DBD9E086EC01D29FE029DA29">>},
- {<<"snappiest">>, <<"25706FEBB5ECAEA900D879A89C6D967C8D1BF700F8546BEBD0DEA514A8CCBFB7">>}]}
+ {<<"snappiest">>, <<"25706FEBB5ECAEA900D879A89C6D967C8D1BF700F8546BEBD0DEA514A8CCBFB7">>},
+ {<<"sqlmig">>, <<"73163B3842A81EEBBF78A38D5FA03D2430863AE79DACCF588CD9EFFD48470A6C">>}]}
 ].
