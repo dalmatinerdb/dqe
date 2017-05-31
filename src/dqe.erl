@@ -185,8 +185,7 @@ run(Query, Opts) ->
                         put(debug_id, filename:basename(Token)),
                         [{trace_id, TraceID}, {parent_id, ParentID}];
                     _ ->
-                        [terminate_when_done, {trace_id, TraceID},
-                         {parent_id, ParentID}]
+                        [{trace_id, TraceID}, {parent_id, ParentID}]
                 end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
     put(start, erlang:system_time()),
