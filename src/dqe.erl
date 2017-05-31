@@ -210,8 +210,10 @@ run(Query, Opts) ->
             %% Queries across a lot of series are blowing up memo on
             %% optimization, so we run otimization only on resonably small
             %% queries.
-            OptiMaxSize = proplists:get_value(optimize_max_size, Opts, 1000),
-            OptMaxUnique = proplists:get_value(optimize_max_unique, Opts, 0.9),
+            OptiMaxSize = proplists:get_value(
+                            optimize_max_size, Opts, infinity),
+            OptMaxUnique = proplists:get_value(
+                             optimize_max_unique, Opts, 0.99),
             FlowOpts = case Unique / Total of
                            UniquePercentage
                              when UniquePercentage > OptMaxUnique;
