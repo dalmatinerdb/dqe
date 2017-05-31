@@ -2,12 +2,12 @@
 
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {start = erlang:system_time(milli_seconds)}).
 
-init([SubQ]) when not is_list(SubQ) ->
-    {ok, #state{}, SubQ}.
+init([], _SubQ) ->
+    {ok, #state{}}.
 
 describe(_) ->
     "debug".

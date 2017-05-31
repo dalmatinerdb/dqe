@@ -2,7 +2,7 @@
 
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
           acc  = [] :: [maps:map()],
@@ -10,8 +10,8 @@
           name :: binary()
          }).
 
-init([Name, MData, SubQ]) when not is_list(SubQ) ->
-    {ok, #state{mdata = MData, name = Name}, SubQ}.
+init([Name, MData], _SubQs) ->
+    {ok, #state{mdata = MData, name = Name}}.
 
 describe(_) ->
     "collect_events".

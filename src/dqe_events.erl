@@ -1,7 +1,7 @@
 -module(dqe_events).
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
           bucket      :: binary(),
@@ -11,11 +11,11 @@
           chunk       :: pos_integer()
          }).
 
-init([Bucket, Start, End, Filter]) ->
+init([Bucket, Start, End, Filter], []) ->
     {ok, ChunkMs} = application:get_env(dqe, get_chunk),
     Chunk = erlang:convert_time_unit(ChunkMs, milli_seconds, nano_seconds),
     {ok, #state{start = Start, 'end' = End, bucket = Bucket, filter = Filter,
-                chunk = Chunk}, []}.
+                chunk = Chunk}}.
 
 describe(#state{bucket = Bucket}) ->
     [Bucket].

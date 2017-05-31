@@ -2,14 +2,12 @@
 
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {buffer = [], refs = [], limit}).
 
-init([Limit, SubQs])  ->
-    SubQs1 = [{make_ref(), Q} || Q <- SubQs],
-    Refs = [R || {R, _} <- SubQs1],
-    {ok, #state{refs = Refs, limit = Limit}, SubQs1}.
+init([Limit], SubQRefs)  ->
+    {ok, #state{refs = SubQRefs, limit = Limit}}.
 
 describe(_) ->
     "funnel".

@@ -2,7 +2,7 @@
 
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
           acc  = <<>>:: binary(),
@@ -11,10 +11,10 @@
           mdata :: [{binary(), binary()}]
          }).
 
-init([Name, MData, SubQ]) ->
-    init([Name, MData, -1, SubQ]);
-init([Name, MData, Resolution, SubQ]) when not is_list(SubQ) ->
-    {ok, #state{name = Name, resolution = Resolution, mdata = MData}, SubQ}.
+init([Name, MData], SubQs) ->
+    init([Name, MData, -1], SubQs);
+init([Name, MData, Resolution], _SubQs) ->
+    {ok, #state{name = Name, resolution = Resolution, mdata = MData}}.
 
 describe(_) ->
     "collect".
