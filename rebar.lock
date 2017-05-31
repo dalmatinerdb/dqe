@@ -4,7 +4,7 @@
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.4.2">>},0},
  {<<"dflow">>,
   {git,"https://github.com/dalmatinerdb/dflow.git",
-       {ref,"c068c86043ae429fcb23fab10b4df8a07b88de66"}},
+       {ref,"354b0793f723237920e61d473f97d61ab01067e3"}},
   0},
  {<<"dproto">>,{pkg,<<"dproto">>,<<"0.5.2">>},0},
  {<<"dqe_fun">>,{pkg,<<"dqe_fun">>,<<"0.2.0">>},0},
