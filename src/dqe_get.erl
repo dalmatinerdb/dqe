@@ -1,7 +1,7 @@
 -module(dqe_get).
 -behaviour(dflow).
 
--export([init/1, describe/1, start/2, emit/3, done/2]).
+-export([init/2, describe/1, start/2, emit/3, done/2]).
 
 -record(state, {
           bucket :: binary(),
@@ -11,16 +11,16 @@
           logged = false :: boolean()
          }).
 
-init([Ranges, Bucket, Key]) ->
+init([Ranges, Bucket, Key], []) ->
     {ok, Chunk} = application:get_env(dqe, get_chunk),
-    init([Ranges, Bucket, Key, Chunk]);
-init([Ranges, Bucket, KeyL, Chunk]) when is_list(KeyL)->
+    init([Ranges, Bucket, Key, Chunk], []);
+init([Ranges, Bucket, KeyL, Chunk], []) when is_list(KeyL)->
     Key = dproto:metric_from_list(KeyL),
-    init([Ranges, Bucket, Key, Chunk]);
-init([Ranges, Bucket, Key, Chunk]) ->
+    init([Ranges, Bucket, Key, Chunk], []);
+init([Ranges, Bucket, Key, Chunk], []) ->
     Ranges1 = rearrange_ranges(Ranges, Chunk, []),
     {ok, #state{ranges = Ranges1, bucket = Bucket, key = Key,
-                chunk = Chunk}, []}.
+                chunk = Chunk}}.
 
 rearrange_ranges([], _Chunk, Acc) ->
     lists:reverse(Acc);

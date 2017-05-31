@@ -40,6 +40,8 @@
                         {'not_found', {binary(), binary()}}}.
 
 -type opts() :: debug |
+                {optimize_max_size, pos_integer()} |
+                {optimize_max_unique, float()} |
                 log_slow_queries |
                 {trace_id, undefined | integer()} |
                 {parent_id, undefined | integer()} |
@@ -183,8 +185,7 @@ run(Query, Opts) ->
                         put(debug_id, filename:basename(Token)),
                         [{trace_id, TraceID}, {parent_id, ParentID}];
                     _ ->
-                        [terminate_when_done, {trace_id, TraceID},
-                         {parent_id, ParentID}]
+                        [{trace_id, TraceID}, {parent_id, ParentID}]
                 end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
     put(start, erlang:system_time()),
@@ -200,17 +201,22 @@ run(Query, Opts) ->
             dqe_span:log("preperation done"),
             dqe_lib:pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
-            Funnel = {dqe_funnel, [Limit, Parts]},
-            Sender = {dflow_send, [self(), WaitRef, Funnel]},
+            Funnel = {dqe_funnel, [Limit], Parts},
+            Sender = {dflow_send, [self(), WaitRef], [Funnel]},
             %% We only optimize the flow when there are at least 10% duplicate
             %% gets, or in other words if less then 90% of the requests are
             %% unique.
             %% Queries across a lot of series are blowing up memo on
             %% optimization, so we run otimization only on resonably small
             %% queries.
+            OptiMaxSize = proplists:get_value(
+                            optimize_max_size, Opts, infinity),
+            OptMaxUnique = proplists:get_value(
+                             optimize_max_unique, Opts, 0.99),
             FlowOpts = case Unique / Total of
-                           UniquePercentage when UniquePercentage > 0.9;
-                                                 Total > 1000 ->
+                           UniquePercentage
+                             when UniquePercentage > OptMaxUnique;
+                                  Total > OptiMaxSize ->
                                FlowOpts0;
                            _ ->
                                [optimize | FlowOpts0]
@@ -357,11 +363,11 @@ prepare(Query, IdxOpts) ->
 add_collect([{named, Name, Mdata, {calc, [], Q = #{return := events}}} | R],
             Acc) ->
     {ok, _Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect_events, [Name, Mdata, Translated]},
+    Q1 = {dqe_collect_events, [Name, Mdata], [Translated]},
     add_collect(R, [Q1 | Acc]);
 add_collect([{named, Name, Mdata, Q} | R], Acc) ->
     {ok, Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect, [Name, Mdata, Resolution, Translated]},
+    Q1 = {dqe_collect, [Name, Mdata, Resolution], [Translated]},
     add_collect(R, [Q1 | Acc]);
 
 add_collect([], Acc) ->
@@ -414,7 +420,7 @@ extract_gets(#{op := get, args := [B, M]}) ->
                        {ok, pos_integer(), dflow:step()}.
 translate(#{op := events, times := [Start, End],
             args := #{bucket := Bucket, filter := Filter}}) ->
-    {ok, 1, {dqe_events, [Bucket, Start, End, Filter]}};
+    {ok, 1, {dqe_events, [Bucket, Start, End, Filter], []}};
 
 translate({calc, [], G}) ->
     translate(G);
@@ -425,14 +431,14 @@ translate({calc, Aggrs, G}) ->
                          mod := Mod,
                      state := State
                     }}, Acc) ->
-                     {dqe_fun_flow, [Mod, State, Acc]}
+                     {dqe_fun_flow, [Mod, State], [Acc]}
              end,
     #{resolution := R} = lists:last(Aggrs),
     {ok, _R, G1} = translate(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 
 translate(#{op := get, resolution := R, args := Args, ranges := Ranges}) ->
-    {ok, R, {dqe_get, [Ranges | Args]}};
+    {ok, R, {dqe_get, [Ranges | Args], []}};
 
 translate({combine,
            #{resolution := R, args := #{mod := Mod, state := State}},
@@ -441,4 +447,4 @@ translate({combine,
                   {ok, _, P1} = translate(Part),
                   P1
               end || Part <- Parts],
-    {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}}.
+    {ok, R, {dqe_fun_list_flow, [Mod, State], Parts1}}.

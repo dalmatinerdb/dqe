@@ -1,15 +1,15 @@
-[0m└─ dqe─0.7.3
+[0m└─ dqe─v0.7.4+build.315.refb45f464
    ├─ ddb_connection─0.4.2
    │  ├─ ddb_client─0.5.5
    │  └─ poolboy─1.5.1
-   ├─ dflow─0.2.1
+   ├─ dflow─v0.2.1+build.33.ref354b079
    ├─ dproto─0.5.2
    │  ├─ jsxd─0.2.4
    │  └─ snappiest─1.2.0
    ├─ dqe_fun─0.2.0
    ├─ dqe_idx─0.3.0
    ├─ dqe_idx_ddb─0.4.0
-   ├─ dqe_idx_pg─0.4.3
+   ├─ dqe_idx_pg─0.4.4
    │  ├─ pgapp─0.0.2
    │  │  └─ epgsql─3.3.0
    │  └─ sqlmig─0.1.4
@@ -19,7 +19,7 @@
    ├─ lager─3.2.4
    │  └─ goldrush─0.1.9
    ├─ mmath─0.2.17
-   ├─ otters─v0.1.4+build.123.ref8a78f88
+   ├─ otters─0.2.8
    │  ├─ dynamic_compile─1.0.0
    │  └─ ibrowse─4.4.0
    └─ qdate─0.4.4

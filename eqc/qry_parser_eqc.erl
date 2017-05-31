@@ -71,7 +71,7 @@ mock() ->
                 fun (_, _) ->
                         {ok, 1000}
                 end),
-    meck:expect(ddb_connection, list,
+    meck:expect(ddb_connection, list_pfx,
                 fun (_, Prefix) ->
                         P1 = dproto:metric_to_list(Prefix),
                         {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
