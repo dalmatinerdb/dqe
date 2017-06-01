@@ -15,7 +15,7 @@
   0},
  {<<"dqe_idx_pg">>,
   {git,"https://github.com/dalmatinerdb/dqe_idx_pg.git",
-       {ref,"3dd24f0ce1ea082b602c3f1fbee6cd63c80ab460"}},
+       {ref,"47a04b72ab6aba7d35d8700d69108d22a94369ce"}},
   0},
  {<<"dynamic_compile">>,{pkg,<<"dynamic_compile">>,<<"1.0.0">>},1},
  {<<"epgsql">>,{pkg,<<"epgsql">>,<<"3.3.0">>},2},
