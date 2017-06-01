@@ -1,4 +1,4 @@
-[0m└─ dqe─v0.7.5+build.314.reff80ab08
+[0m└─ dqe─v0.7.5+build.315.ref4a1f8da
    ├─ ddb_connection─0.4.2
    │  ├─ ddb_client─0.5.5
    │  └─ poolboy─1.5.1
@@ -7,9 +7,9 @@
    │  ├─ jsxd─0.2.4
    │  └─ snappiest─1.2.0
    ├─ dqe_fun─0.2.1
-   ├─ dqe_idx─v0.3.0+build.65.refb3195ce
-   ├─ dqe_idx_ddb─v0.4.0+build.57.ref6bff3ed
-   ├─ dqe_idx_pg─v0.4.3+build.169.ref47a04b7
+   ├─ dqe_idx─0.4.0
+   ├─ dqe_idx_ddb─0.5.0
+   ├─ dqe_idx_pg─0.5.0
    │  ├─ pgapp─0.0.2
    │  │  └─ epgsql─3.3.0
    │  └─ sqlmig─0.1.5
