@@ -40,6 +40,7 @@
                         {'not_found', {binary(), binary()}}}.
 
 -type opts() :: debug |
+                {grace, pos_integer()} |
                 {optimize_max_size, pos_integer()} |
                 {optimize_max_unique, float()} |
                 log_slow_queries |

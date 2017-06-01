@@ -1,18 +1,18 @@
-[0m└─ dqe─v0.7.4+build.315.refb45f464
+[0m└─ dqe─v0.7.5+build.315.ref4a1f8da
    ├─ ddb_connection─0.4.2
    │  ├─ ddb_client─0.5.5
    │  └─ poolboy─1.5.1
-   ├─ dflow─v0.2.1+build.33.ref354b079
+   ├─ dflow─0.3.0
    ├─ dproto─0.5.2
    │  ├─ jsxd─0.2.4
    │  └─ snappiest─1.2.0
-   ├─ dqe_fun─0.2.0
-   ├─ dqe_idx─0.3.0
-   ├─ dqe_idx_ddb─0.4.0
-   ├─ dqe_idx_pg─0.4.4
+   ├─ dqe_fun─0.2.1
+   ├─ dqe_idx─0.4.0
+   ├─ dqe_idx_ddb─0.5.0
+   ├─ dqe_idx_pg─0.5.0
    │  ├─ pgapp─0.0.2
    │  │  └─ epgsql─3.3.0
-   │  └─ sqlmig─0.1.4
+   │  └─ sqlmig─0.1.5
    ├─ erlware_commons─1.0.0
    │  └─ cf─0.2.2
    ├─ hdr_histogram─0.2.0
