@@ -8,22 +8,23 @@
 %%%-------------------------------------------------------------------
 -module(dql_resolution).
 
--export([resolve/2, propagate/1, start_time/1]).
+-export([resolve/1, propagate/1, time_range/1]).
 
-resolve(Qs, T) ->
-    case lists:foldl(fun get_resolution_fn/2, {[], T, #{}}, Qs) of
+resolve(Qs) ->
+    case lists:foldl(fun get_resolution_fn/2, {[], #{}}, Qs) of
         {error, E} ->
             {error, E};
-        {Qs1, _, _} ->
+        {Qs1, _} ->
             {ok, lists:reverse(Qs1)}
     end.
 
 propagate(Qs)->
     [apply_times(Q) || Q <- Qs].
 
-start_time(T) ->
-    {Start, _End} = compute_se(apply_times(T, 1000), 1000),
-    Start.
+time_range(T) ->
+    T1 = apply_times(T, 1),
+    {Start, Count} = compute_sc(T1),
+    {Start, Start+Count}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -31,15 +32,15 @@ start_time(T) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec get_resolution_fn(dql:named(),
-                        {[dql:named()], dql:time(), #{}} |
+                        {[dql:named()], #{}} |
                         {error, resolution_conflict}) ->
-                               {[dql:named()], dql:time(), #{}} |
+                               {[dql:named()], #{}} |
                                {error, no_results} |
                                {error, resolution_conflict}.
-get_resolution_fn(Q, {QAcc, T, #{} = RAcc}) when is_list(QAcc) ->
-    case get_times(Q, T, RAcc) of
+get_resolution_fn(Q, {QAcc, #{} = RAcc}) when is_list(QAcc) ->
+    case get_times(Q, RAcc) of
         {ok, Q1, RAcc1} ->
-            {[Q1 | QAcc], T, RAcc1};
+            {[Q1 | QAcc], RAcc1};
         {error, no_results} ->
             {error, no_results};
         {error, resolution_conflict} ->
@@ -54,34 +55,35 @@ get_resolution_fn(_, {error, resolution_conflict}) ->
 %% @doc Add start and end times to a statment.
 %% @end
 %%--------------------------------------------------------------------
--spec get_times(dql:named(), dql:time(), #{}) ->
+-spec get_times(dql:named(), #{}) ->
                        {ok, dql:named(), #{}} |
-                        {error, no_results} |
+                       {error, no_results} |
                        {error, resolution_conflict}.
-get_times(O = #{op := named, args := [N, M, C]}, T, #{} = BucketResolutions) ->
-    case get_times_(C, T, BucketResolutions) of
+get_times(O = #{op := named, args := [N, M, C]},
+          #{} = BucketResolutions) ->
+    case get_times_(C, 0, BucketResolutions) of
         {ok, C1, BucketResolutions1} ->
             {ok, O#{args => [N, M, C1]}, BucketResolutions1};
         E ->
             E
     end.
 
--spec get_times_(dql:flat_stmt(), dql:time(), #{}) ->
+-spec get_times_(dql:flat_stmt(), integer(), #{}) ->
                         {ok, dql:flat_stmt(), #{}} |
                         {error, no_results} |
                         {error, resolution_conflict}.
 
-get_times_({calc, _Chain, {combine, F = #{}, [] = _Elements}}, _T,
-            #{} = _BucketResolutions) ->
+get_times_({calc, _Chain, {combine, F = #{}, [] = _Elements}},
+           _Shift, #{} = _BucketResolutions) ->
     dqe_lib:pdebug(prepare, "No input for combiner Fn: ~p", [F]),
     {error, no_results};
 
 get_times_({calc, Chain,
             {combine,
              F = #{args := A = #{mod := FMod, constants := Cs}}, Elements}
-           }, T, #{} = BucketResolutions) ->
+           }, Shift, #{} = BucketResolutions) ->
     Res = lists:foldl(fun (E, {ok, Acc, #{} = BRAcc}) ->
-                              case get_times_(E, T, BRAcc) of
+                              case get_times_(E, Shift, BRAcc) of
                                   {ok, E1, BR1} ->
                                       {ok, [E1 | Acc], BR1};
                                   Error ->
@@ -113,22 +115,23 @@ get_times_({calc, Chain,
             {error, E}
     end;
 
-get_times_(TS = #{op := timeshift,
-                  args := [Shift, C]}, T, BucketResolutions) ->
-    T1 = TS#{args => [Shift, T]},
-    {ok, C1, BucketResolutions1} = get_times_(C, T1, BucketResolutions),
+get_times_(#{op := timeshift,
+             args := [NewShift, C]}, Shift, BucketResolutions) ->
+    {ok, C1, BucketResolutions1} =
+        get_times_(C, Shift + NewShift, BucketResolutions),
     {ok, C1, BucketResolutions1};
 
-get_times_({calc, Chain, E = #{op := events}}, T, BucketResolutions) ->
-    C1 = {calc, Chain, E#{times => T}},
+get_times_({calc, Chain, E = #{op := events}}, Shift, BucketResolutions) ->
+    C1 = {calc, Chain, E#{shift => Shift}},
     {ok, C1, BucketResolutions};
-get_times_({calc, Chain, Get}, T, BucketResolutions) ->
-    {ok, Get1 = #{args := A = [Rms | _]}, BucketResolutions1} =
+get_times_({calc, Chain, Get}, Shift, BucketResolutions) ->
+    {ok, Get1 = #{ranges := Ranges,
+                  resolution := Rms}, BucketResolutions1} =
         bucket_resolution(Get, BucketResolutions),
-    T1 = apply_times(T, Rms),
-    {Start, Count} = compute_se(T1, Rms),
+    Ranges1 = [{(Start - Shift) div Rms, (End - Shift) div Rms, Endpoint}
+               || {Start, End, Endpoint} <- Ranges],
     Calc1 = {calc, Chain, Get1#{resolution => Rms,
-                                args => [Start, Count | A]}},
+                                ranges => Ranges1}},
     {ok, apply_times(Calc1), BucketResolutions1}.
 
 %%--------------------------------------------------------------------
@@ -175,29 +178,40 @@ map_constants(E) ->
 
 -spec bucket_resolution(dql:get_stmt(), #{}) ->
                                {ok, dql:get_stmt(), #{}}.
-bucket_resolution(O = #{args := A = [Bucket, _]}, BucketResolutions) ->
-    {Res, BR1} = case maps:get(Bucket, BucketResolutions, undefined) of
+bucket_resolution(O = #{args := [Bucket| _],
+                       ranges := Ranges},
+                  BucketResolutions)
+  when is_binary(Bucket)->
+    Endpoint = extract_endpoint(Ranges),
+    {Res, BR1} = case  maps:get({Endpoint, Bucket},
+                                BucketResolutions, undefined) of
                      undefined ->
-                         {ok, R} = get_br(Bucket),
-                         {R, maps:put(Bucket, R, BucketResolutions)};
+                         {ok, R} = get_br(Endpoint, Bucket),
+                         {R, maps:put({Endpoint, Bucket}, R,
+                                      BucketResolutions)};
                      R ->
                          {R, BucketResolutions}
                  end,
-    {ok, O#{args => [Res | A]}, BR1}.
+    {ok, O#{resolution => Res}, BR1}.
+
+extract_endpoint([{_, _, null} | R]) ->
+    extract_endpoint(R);
+extract_endpoint([{_, _, E} | _]) ->
+    E.
 
 %%--------------------------------------------------------------------
 %% @doc Fetch the resolution of a bucket from DDB
 %% @end
 %%--------------------------------------------------------------------
--spec get_br(binary()) -> {ok, pos_integer()}.
-get_br(Bucket) ->
-    ddb_connection:resolution(Bucket).
+-spec get_br(term(), binary()) -> {ok, pos_integer()}.
+get_br(Endpoint, Bucket) ->
+    ddb_connection:resolution(dqe_util:get_pool(Endpoint), Bucket).
 
 %%--------------------------------------------------------------------
 %% @doc Propagates resolution from the bottom of a call to the top.
 %% @end
 %%--------------------------------------------------------------------
-get_resolution(#{op := O, args := [_Start, _Count, Rms | _]})
+get_resolution(#{op := O, resolution := Rms})
   when O =:= get;
        O =:= sget ->
     {ok, Rms};
@@ -217,25 +231,27 @@ get_resolution({combine, #{resolution := Rms}, _Elements}) ->
 %% @end
 %%--------------------------------------------------------------------
 
-compute_se(#{ op := between, args := [S, E]}, _Rms) when E > S->
-    {S, E - S};
-compute_se(#{ op := between, args := [S, E]}, _Rms) ->
-    {E, S - E};
-compute_se(#{ op := last, args := [N]}, Rms) ->
-    NowMs = erlang:system_time(milli_seconds),
-    RelativeNow = NowMs div Rms,
-    {RelativeNow - N, N};
 
-compute_se(#{op := before, args := [E, D]}, _Rms) ->
+
+compute_sc(#{ op := between, args := [S, E]}) when E > S->
+    {S, E - S};
+
+compute_sc(#{ op := between, args := [S, E]}) ->
+    {E, S - E};
+
+compute_sc(#{ op := last, args := [N]}) ->
+    NowMs = erlang:system_time(milli_seconds),
+    {NowMs - N, N};
+
+compute_sc(#{op := before, args := [E, D]}) ->
     {E - D, D};
 
-compute_se(#{op := timeshift, args := [Shift, T]}, Rms) ->
-    {S, D} = compute_se(T, Rms),
+compute_sc(#{op := timeshift, args := [Shift, T]}) ->
+    {S, D} = compute_sc(T),
     {S - Shift, D};
 
-compute_se(#{op :='after', args := [S, D]}, _Rms) ->
+compute_sc(#{op :='after', args := [S, D]}) ->
     {S, D}.
-
 
 %%--------------------------------------------------------------------
 %% @doc Applies time computations to a query range
@@ -290,11 +306,7 @@ apply_times({calc, Chain, {combine, F = #{resolution := Rms}, Elements}}) ->
     Chain2 = lists:reverse(Chain1),
     {calc, Chain2, {combine, F, Elements1}};
 
-apply_times({calc, Chain, Q = #{op := events, times := T}}) ->
-    {StartMs, CountMs} = compute_se(apply_times(T, 1), 1),
-    Start = erlang:convert_time_unit(StartMs, milli_seconds, nano_seconds),
-    Count = erlang:convert_time_unit(CountMs, milli_seconds, nano_seconds),
-    End = Start + Count,
+apply_times({calc, Chain, Q = #{op := events, ranges := [{Start, End, _}]}}) ->
     {calc, Chain, Q#{times => [Start, End]}};
 
 apply_times({calc, Chain, Get}) ->
@@ -302,5 +314,3 @@ apply_times({calc, Chain, Get}) ->
     Chain1 = time_walk_chain(Chain, Rms, []),
     Chain2 = lists:reverse(Chain1),
     {calc, Chain2, Get}.
-
-

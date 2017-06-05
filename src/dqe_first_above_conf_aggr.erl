@@ -26,7 +26,8 @@ resolution(Resolution, State = #state{time = Time}) ->
     {Res, State#state{first = Res}}.
 
 describe(#state{const = Const, time = Time})->
-    ["first_above_conf(", float_to_list(Const), ", ", integer_to_list(Time), ",s)"].
+    ["first_above_conf(", float_to_list(Const), ", ",
+     integer_to_list(Time), ",s)"].
 
 spec() ->
     [{<<"first_above_conf">>, [metric, integer, time], none, metric},

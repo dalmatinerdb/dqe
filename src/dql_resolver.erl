@@ -47,7 +47,7 @@ resolve_functions(#{op := timeshift, args := [S, Q]}) ->
 
 resolve_functions(O = #{op := group_by, args := [F, G, Function]}) ->
     case dqe_fun:lookup(Function, [metric_list]) of
-        {ok,{{_, _, _}, ReturnType, FunMod}} ->
+        {ok, {{_, _, _}, ReturnType, FunMod}} ->
             FArgs = #{name      => Function,
                       constants => [],
                       mod       => FunMod},
@@ -78,7 +78,7 @@ resolve_functions(#{op := fcall, args := #{name   := Function,
                 %% If we find a function that does not take a
                 %% list of sub functions we know this is a normal
                 %%aggregate.
-                {ok,{{_, _, none}, ReturnType, FunMod}} ->
+                {ok, {{_, _, none}, ReturnType, FunMod}} ->
                     FArgs = #{name      => Function,
                               orig_args => Args,
                               mod       => FunMod,
@@ -92,7 +92,7 @@ resolve_functions(#{op := fcall, args := #{name   := Function,
                       }};
                 %% If we find one that takes a list of sub functions
                 %% we know it is a combinator function.
-                {ok,{{_, _, _}, ReturnType, FunMod}} ->
+                {ok, {{_, _, _}, ReturnType, FunMod}} ->
                     FArgs = #{name      => Function,
                               orig_args => Args,
                               mod       => FunMod,

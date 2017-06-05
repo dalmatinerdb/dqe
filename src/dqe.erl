@@ -10,7 +10,7 @@
 %%%-------------------------------------------------------------------
 -module(dqe).
 
--export([prepare/1, run/1, run/2, error_string/1, init/0]).
+-export([prepare/2, run/1, run/2, error_string/1, init/0]).
 
 -type metric_reply() :: #{
                     name       => binary(),
@@ -21,11 +21,11 @@
                    }.
 
 -type event_reply() :: #{
-                    name       => binary(),
-                    type       => events,
-                    resolution => pos_integer(),
-                    data       => binary()
-                   }.
+                   name       => binary(),
+                   type       => events,
+                   resolution => pos_integer(),
+                   data       => binary()
+                  }.
 
 -type reply_element() :: metric_reply() | event_reply().
 
@@ -37,10 +37,14 @@
                         'timeout' |
                         binary() |
                         {not_found, binary(), [atom()]} |
-                        {'not_found',{binary(), binary()}}}.
+                        {'not_found', {binary(), binary()}}}.
 
 -type opts() :: debug |
+                {optimize_max_size, pos_integer()} |
+                {optimize_max_unique, float()} |
                 log_slow_queries |
+                {trace_id, undefined | integer()} |
+                {parent_id, undefined | integer()} |
                 {slow_ms, pos_integer()} |
                 {token, binary()} |
                 {timeout, pos_integer() | infinity}.
@@ -165,75 +169,114 @@ run(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec run(Query :: dql:raw_query(), Timeout :: [opts()]) ->
+-spec run(Query :: dql:raw_query(), Opts :: [opts()]) ->
                  {error, _} |
                  {ok, Start::pos_integer(), query_reply()}.
 run(Query, Opts) ->
+
+    TraceID = proplists:get_value(trace_id, Opts, undefined),
+    ParentID = proplists:get_value(parent_id, Opts, undefined),
+    IdxOpts = proplists:get_value(idx_opts, Opts, []),
+    dqe_span:start(query, TraceID),
+    dqe_span:tag(query, Query),
+    FlowOpts0 = case proplists:get_value(token, Opts) of
+                    Token when is_binary(Token)  ->
+                        dqe_span:tag(debug_id, Token),
+                        put(debug_id, filename:basename(Token)),
+                        [{trace_id, TraceID}, {parent_id, ParentID}];
+                    _ ->
+                        [{trace_id, TraceID}, {parent_id, ParentID}]
+                end,
     Timeout = proplists:get_value(timeout, Opts, infinity),
-    case proplists:get_value(token, Opts) of
-        Token when is_binary(Token)  ->
-            put(debug_id, filename:basename(Token));
-        _ ->
-            ok
-    end,
     put(start, erlang:system_time()),
-    case prepare(Query) of
+    case prepare(Query, IdxOpts) of
         {ok, {0, 0, _Parts}, _Start, _Limit} ->
             dqe_lib:pdebug('query', "prepare found no metrics.", []),
+            dqe_span:tag(result, "no metrics"),
+            dqe_span:stop(),
             {error, no_results};
         {ok, {Total, Unique, Parts}, Start, Limit} ->
+            dqe_span:tag(parts, Total),
+            dqe_span:tag(unique, Unique),
+            dqe_span:log("preperation done"),
             dqe_lib:pdebug('query', "preperation done.", []),
             WaitRef = make_ref(),
-            Funnel = {dqe_funnel, [Limit, Parts]},
-            Sender = {dflow_send, [self(), WaitRef, Funnel]},
+            Funnel = {dqe_funnel, [Limit], Parts},
+            Sender = {dflow_send, [self(), WaitRef], [Funnel]},
             %% We only optimize the flow when there are at least 10% duplicate
             %% gets, or in other words if less then 90% of the requests are
             %% unique.
             %% Queries across a lot of series are blowing up memo on
             %% optimization, so we run otimization only on resonably small
             %% queries.
+            OptiMaxSize = proplists:get_value(
+                            optimize_max_size, Opts, infinity),
+            OptMaxUnique = proplists:get_value(
+                             optimize_max_unique, Opts, 0.99),
             FlowOpts = case Unique / Total of
-                           UniquePercentage when UniquePercentage > 0.9;
-                                                 Total > 1000 ->
-                               [];
+                           UniquePercentage
+                             when UniquePercentage > OptMaxUnique;
+                                  Total > OptiMaxSize ->
+                               FlowOpts0;
                            _ ->
-                               [optimize]
+                               [optimize | FlowOpts0]
                        end,
             {ok, _Ref, Flow} = dflow:build(Sender, FlowOpts),
+            dqe_span:log("preperation done"),
             dqe_lib:pdebug('query', "flow generated.", []),
             dflow:start(Flow, run),
-            case dflow_send:recv(WaitRef, Timeout) of
+            Recv = dflow_send:recv(WaitRef, Timeout),
+            dqe_span:log("query done"),
+            case Recv of
                 {ok, [{error, no_results}]} ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
+                    dqe_span:tag(result, "no results"),
+                    dqe_span:stop(),
                     {error, no_results};
                 {ok, [Result]} ->
                     %% Result1 = [Element || {points, Element} <- Result],
-                    Result1 = case proplists:get_bool(return_graph, Opts) of
-                                  true ->
-                                      Desc = dflow:describe(Flow),
-                                      Graph= dflow_graph:desc_to_graphviz(Desc),
-                                      GraphBin = list_to_binary(Graph),
-                                      [#{type => graph,
-                                         value => GraphBin} | Result];
-                                  _ ->
-                                      Result
-                              end,
+                    Result1 = maybe_return_graph(Result, Flow, Opts),
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query complete.", []),
+                    dqe_span:tag(result, "success"),
+                    dqe_span:stop(),
                     {ok, Start, Result1};
                 {ok, []} ->
                     maybe_debug(Flow, Opts),
                     dqe_lib:pdebug('query', "Query has no results.", []),
+                    dqe_span:tag(result, "no results"),
+                    dqe_span:stop(),
                     {error, no_results};
                 E ->
                     maybe_debug(Flow, Opts),
-                    dqe_lib:pdebug('query', "Query error: ~p", [E]),
+                    Es = io_lib:format("~p", [E]),
+                    dqe_lib:pdebug('query', "Query error: ~s", [Es]),
+                    dqe_span:tag(result, "error"),
+                    dqe_span:tag(error, Es),
+                    dqe_span:stop(),
                     E
             end;
         E ->
+            Es = io_lib:format("~p", [E]),
+            dqe_span:tag(result, "error"),
+            dqe_span:tag(error, Es),
+            dqe_span:stop(),
             E
     end.
+
+maybe_return_graph(Result, Flow, Opts) ->
+    case proplists:get_bool(return_graph, Opts) of
+        true ->
+            Desc = dflow:describe(Flow),
+            Graph= dflow_graph:desc_to_graphviz(Desc),
+            GraphBin = list_to_binary(Graph),
+            [#{type => graph,
+               value => GraphBin} | Result];
+        _ ->
+            Result
+    end.
+
 
 %% The debug file is the debug ID prefixed with time
 debug_file() ->
@@ -251,7 +294,7 @@ do_debug(Opts) ->
             true;
         %% If we don't log slow queries we don't bother about how
         %% long the query took.
-        {_, false,_} ->
+        {_, false, _} ->
             false;
         %% If we log slow queries we check if the total query time is larger
         %% then the slow_ms limit
@@ -283,16 +326,16 @@ maybe_debug(Flow, Opts) ->
 %% @end
 %%--------------------------------------------------------------------
 
--spec prepare(Query :: dql:raw_query()) ->
+-spec prepare(Query :: dql:raw_query(), [term()]) ->
                      {ok, {Total  :: non_neg_integer(),
                            Unique :: non_neg_integer(),
                            DFlows :: [dflow:step()]},
-                        Start :: pos_integer(),
+                      Start :: pos_integer(),
                       Limit :: dql:limit()} |
                      {error, _}.
 
-prepare(Query) ->
-    case dql:prepare(Query) of
+prepare(Query, IdxOpts) ->
+    case dql:prepare(Query, IdxOpts) of
         {ok, Parts, Start, Limit} ->
             dqe_lib:pdebug('prepare', "Parsing done.", []),
             {Total, Unique} = count_parts(Parts),
@@ -302,7 +345,6 @@ prepare(Query) ->
             dqe_lib:pdebug('prepare', "Naming applied.", []),
             {ok, {Total, Unique, Parts1}, Start, Limit};
         E ->
-            io:format("E: ~p~n", [E]),
             E
     end.
 
@@ -318,13 +360,14 @@ prepare(Query) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec add_collect([dql:query_stmt()], [dflow:step()]) -> {ok, [dflow:step()]}.
-add_collect([{named, Name, Mdata, {calc, [], Q = #{return := events}}} | R], Acc) ->
+add_collect([{named, Name, Mdata, {calc, [], Q = #{return := events}}} | R],
+            Acc) ->
     {ok, _Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect_events, [Name, Mdata, Translated]},
+    Q1 = {dqe_collect_events, [Name, Mdata], [Translated]},
     add_collect(R, [Q1 | Acc]);
 add_collect([{named, Name, Mdata, Q} | R], Acc) ->
     {ok, Resolution, Translated} = translate(Q),
-    Q1 = {dqe_collect, [Name, Mdata, Resolution, Translated]},
+    Q1 = {dqe_collect, [Name, Mdata, Resolution], [Translated]},
     add_collect(R, [Q1 | Acc]);
 
 add_collect([], Acc) ->
@@ -362,7 +405,7 @@ extract_gets({calc, _, O = #{op := events}}) ->
     [O];
 extract_gets({calc, _, C}) ->
     extract_gets(C);
-extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
+extract_gets(#{op := get, args := [B, M]}) ->
     {B, M}.
 
 
@@ -377,64 +420,31 @@ extract_gets(#{op := get, args := [_, _,_, B, M]}) ->
                        {ok, pos_integer(), dflow:step()}.
 translate(#{op := events, times := [Start, End],
             args := #{bucket := Bucket, filter := Filter}}) ->
-    {ok, 1, {dqe_events, [Bucket, Start, End, Filter]}};
+    {ok, 1, {dqe_events, [Bucket, Start, End, Filter], []}};
 
 translate({calc, [], G}) ->
     translate(G);
 
-%% Sadly this isn't really working, leave it in here.
-%% translate({calc,
-%%            [#{op := fcall,
-%%               resolution := R,
-%%               args :=
-%%                   #{
-%%                     mod := Mod,
-%%                 state := State
-%%               }}],
-%%            #{op := get, args := Args}}) ->
-%%     G1 = {dqe_get_fun, [Mod, State] ++ Args},
-%%     {ok, R, G1};
-
-%% translate({calc,
-%%            [#{op := fcall,
-%%               args := #{
-%%                     mod := Mod,
-%%                state := State
-%%               }} | Aggrs],
-%%            #{op := get, args := Args}}) ->
-%%     FoldFn = fun(#{op := fcall,
-%%                    args := #{
-%%                          mod := ModX,
-%%                      state := StateX
-%%                     }}, Acc) ->
-%%                      {dqe_fun_flow, [ModX, StateX, Acc]}
-%%              end,
-%%     #{resolution := R} = lists:last(Aggrs),
-%%     G1 = {dqe_get_fun, [Mod, State] ++ Args},
-%%     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
-
-%% TODO we can do this better!
-
 translate({calc, Aggrs, G}) ->
     FoldFn = fun(#{op := fcall,
                    args := #{
-                     mod := Mod,
+                         mod := Mod,
                      state := State
                     }}, Acc) ->
-                     {dqe_fun_flow, [Mod, State, Acc]}
+                     {dqe_fun_flow, [Mod, State], [Acc]}
              end,
     #{resolution := R} = lists:last(Aggrs),
     {ok, _R, G1} = translate(G),
     {ok, R, lists:foldl(FoldFn, G1, Aggrs)};
 
-translate(#{op := get, resolution := R, args := Args}) ->
-    {ok, R, {dqe_get, Args}};
+translate(#{op := get, resolution := R, args := Args, ranges := Ranges}) ->
+    {ok, R, {dqe_get, [Ranges | Args], []}};
 
 translate({combine,
-             #{resolution := R, args := #{mod := Mod, state := State}},
-             Parts}) ->
+           #{resolution := R, args := #{mod := Mod, state := State}},
+           Parts}) ->
     Parts1 = [begin
                   {ok, _, P1} = translate(Part),
                   P1
               end || Part <- Parts],
-    {ok, R, {dqe_fun_list_flow, [Mod, State | Parts1]}}.
+    {ok, R, {dqe_fun_list_flow, [Mod, State], Parts1}}.

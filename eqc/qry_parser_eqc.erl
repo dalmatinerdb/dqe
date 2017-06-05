@@ -30,7 +30,7 @@ prop_prepare() ->
            ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
-                       case ?P:prepare(Unparsed) of
+                       case ?P:prepare(Unparsed, []) of
                            {ok, _, _, _} ->
                                true;
                            {error, E} ->
@@ -45,7 +45,7 @@ prop_dflow_prepare() ->
            ?FORALL(T, select_stmt(),
                    begin
                        Unparsed = dql_unparse:unparse(T),
-                       case dqe:prepare(Unparsed) of
+                       case dqe:prepare(Unparsed, []) of
                            {ok, _, _, _} ->
                                true;
                            {error, E} ->
@@ -58,16 +58,20 @@ prop_dflow_prepare() ->
 mock() ->
     application:ensure_all_started(dqe_connection),
     meck:new(ddb_connection),
+    meck:expect(ddb_connection, pool,
+                fun () ->
+                        default
+                end),
     meck:expect(ddb_connection, list,
                 fun (_) ->
                         M = [<<"a">>, <<"b">>, <<"c">>],
                         {ok, [dproto:metric_from_list(M)]}
                 end),
     meck:expect(ddb_connection, resolution,
-                fun (_) ->
+                fun (_, _) ->
                         {ok, 1000}
                 end),
-    meck:expect(ddb_connection, list,
+    meck:expect(ddb_connection, list_pfx,
                 fun (_, Prefix) ->
                         P1 = dproto:metric_to_list(Prefix),
                         {ok, [dproto:metric_from_list(P1 ++ [<<"a">>])]}
@@ -75,8 +79,9 @@ mock() ->
     ensure_dqe_fun(),
     meck:new(dqe_idx, [passthrough]),
     meck:expect(dqe_idx, lookup,
-                fun (_, _) ->
-                        {ok, [{<<"a">>, <<"a">>, [<<"a">>]}]}
+                fun (_Q, Start, End, _Opts, _G) ->
+                        {ok, [{{<<"a">>, <<"a">>, [{Start, End, default}]},
+                               [<<"a">>]}]}
                 end),
 
     fun unmock/0.
