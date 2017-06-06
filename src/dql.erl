@@ -240,11 +240,15 @@ get_resolution(Qs, Start, End) ->
 %% @doc calculate resolutions for the whole call stack.
 %% @end
 %%--------------------------------------------------------------------
-propagate_resolutions(Qs, Start, _End) ->
-    Qs1 = dql_resolution:propagate(Qs),
-    dqe_span:log("resolutions propagated"),
-    dqe_span:tag(start, Start),
-    apply_names(Qs1, Start).
+propagate_resolutions(Qs, _Start, _End) ->
+    case dql_resolution:propagate(Qs) of
+        {error, E} ->
+            {error, E};
+        {ok, Qs1, Start1} ->
+            dqe_span:log("resolutions propagated"),
+            dqe_span:tag(start, Start1),
+            apply_names(Qs1, Start1)
+    end.
 
 apply_names(Qs, Start) ->
     Qs1 = dql_naming:update(Qs),

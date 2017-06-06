@@ -19,7 +19,13 @@ resolve(Qs) ->
     end.
 
 propagate(Qs)->
-    [apply_times(Q) || Q <- Qs].
+    Qs1 = [apply_times(Q) || Q <- Qs],
+    case lists:foldl(fun get_start/2, undefined, Qs1) of
+        {error, E} ->
+            {error, E};
+        Start ->
+            {ok, Qs1, Start}
+    end.
 
 time_range(T) ->
     T1 = apply_times(T, 1),
@@ -314,3 +320,49 @@ apply_times({calc, Chain, Get}) ->
     Chain1 = time_walk_chain(Chain, Rms, []),
     Chain2 = lists:reverse(Chain1),
     {calc, Chain2, Get}.
+
+%%--------------------------------------------------------------------
+%% @doc Fold function to find astual data start time
+%% @end
+%%--------------------------------------------------------------------
+
+get_start(_, {error, _} = Error) ->
+    Error;
+
+get_start({named, _N, _M, Chain}, Start) ->
+    get_start(Chain, Start);
+
+get_start({calc, _, {combine, _F, Elements}}, Start) ->
+    lists:foldl(fun (El, S) ->
+                        case get_start(El, S) of
+                            {error, E} ->
+                                {error, E};
+                            S1 when S =:= undefined ->
+                                S1;
+                            S ->
+                                S;
+                            _ ->
+                                {error, resolution_conflict}
+                        end
+                end, Start, Elements);
+
+get_start({calc, _, #{times := [Start, _End]}}, undefined) ->
+    Start;
+get_start({calc, _, #{times := [Start, _End]}}, ExpectedStart)
+      when Start =:= ExpectedStart->
+    Start;
+get_start({calc, _, #{times := [_Start, _End]}}, _ExpectedStart) ->
+    {error, resolution_conflict};
+
+get_start({calc, _, #{resolution := Rms,
+                      ranges := Ranges}}, Start) ->
+    Offset = lists:min([S || {S, _, _} <- Ranges]),
+    DataStart = Offset * Rms,
+    case Start of
+        undefined ->
+            DataStart;
+        DataStart ->
+            DataStart;
+        _ ->
+            {error, resolution_conflict}
+    end.
