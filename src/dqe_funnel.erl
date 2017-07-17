@@ -63,10 +63,10 @@ calculate_limit_value(#{data := Data} = M,
                         op := fcall}) ->
     Cs1 = [to_v(C) || C <- Cs],
     Cs2 = [C || C <- Cs1, C =/= undefined],
-    Count = mmath_bin:length_r(Data),
+    Count = mmath_bin:length(Data),
     S0 = Mod:init(Cs2 ++ [Count]),
     {_, S1} = Mod:resolution(1, S0),
-    {V, _} = Mod:run([Data], S1),
+    {V, _} = Mod:run([mmath_bin:realize(Data)], S1),
     [V0] = mmath_bin:to_list(mmath_bin:derealize(V)),
     {V0, M}.
 
