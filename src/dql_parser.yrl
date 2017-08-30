@@ -282,7 +282,7 @@ tag -> part_or_name ':' part_or_name : {tag, '$1', '$3'}.
 where_part -> tag '=' part_or_name    : {'=', '$1', '$3'}.
 where_part -> tag op_ne part_or_name  : {'!=', '$1', '$3'}.
 where_part -> tag kw_not part_or_name : {'!=', '$1', '$3'}.
-where_part -> tag                     : {'=', '$1', <<>>}.
+where_part -> tag                     : {'exists', '$1'}.
 where_part -> '(' where ')'           : '$2'.
 
 where -> where_part              : '$1'.

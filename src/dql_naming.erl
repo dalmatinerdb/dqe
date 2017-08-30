@@ -22,7 +22,6 @@ update(Qs) ->
 %%% Internal functions
 %%%===================================================================
 
-
 update_name({named, L, M, C = {calc, _, #{op := events}}}) when is_list(L) ->
     {named, dql_unparse:unparse_metric(L), M, C};
 
@@ -69,3 +68,4 @@ extract_groupings(#{groupings := Gs}) ->
     Gs;
 extract_groupings(_) ->
     [].
+
