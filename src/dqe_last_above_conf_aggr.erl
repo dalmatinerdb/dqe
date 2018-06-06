@@ -37,4 +37,4 @@ run([Data], S = #state{const = Const, last = Last}) ->
     {mmath_aggr:last_above_conf(Data, Const, Last), S}.
 
 help() ->
-    <<"Returns the last value above a given confidence threashold.">>.
+    <<"Returns the last value above a given confidence threshold.">>.
