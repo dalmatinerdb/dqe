@@ -36,4 +36,4 @@ run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:count_below(Data, Const, Count), S}.
 
 help() ->
-    <<"Returns the count of value below a given threashold.">>.
+    <<"Returns the count of value below a given threshold.">>.

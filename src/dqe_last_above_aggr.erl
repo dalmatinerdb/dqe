@@ -36,4 +36,4 @@ run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:last_above(Data, Const, Count), S}.
 
 help() ->
-    <<"Returns the last value above a given threashold.">>.
+    <<"Returns the last value above a given threshold.">>.

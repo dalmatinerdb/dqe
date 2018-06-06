@@ -36,4 +36,4 @@ run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:last_below(Data, Const, Count), S}.
 
 help() ->
-    <<"Returns the last value below a given threashold.">>.
+    <<"Returns the last value below a given threshold.">>.

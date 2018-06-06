@@ -37,4 +37,4 @@ run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:count_above_conf(Data, Const, Count), S}.
 
 help() ->
-    <<"Returns the count of value above a given confidence threashold.">>.
+    <<"Returns the count of value above a given confidence threshold.">>.

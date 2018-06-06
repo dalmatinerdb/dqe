@@ -37,4 +37,4 @@ run([Data], S = #state{const = Const, first = First}) ->
     {mmath_aggr:first_below_conf(Data, Const, First), S}.
 
 help() ->
-    <<"Returns the first value below a given confidence threashold.">>.
+    <<"Returns the first value below a given confidence threshold.">>.

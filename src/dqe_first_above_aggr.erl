@@ -36,4 +36,4 @@ run([Data], S = #state{const = Const, count = Count}) ->
     {mmath_aggr:first_above(Data, Const, Count), S}.
 
 help() ->
-    <<"Returns the fist value above a given threashold.">>.
+    <<"Returns the first value above a given threshold.">>.
